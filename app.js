@@ -1,13 +1,13 @@
 "use strict";
 
-const APP_VERSION = "2.1.0";
+const APP_VERSION = "2.2.0";
 
 /* ================= tunable constants ================= */
 const COUNT_OPTIONS = [5, 10, 15, 20];
 const WEAK_BIAS = 0.4;         // chance a question is drawn from saved weak items
 
 // per-question time when the timer is on (read mode is never timed)
-function timeForQ(q) { return q.level === "sent" ? 30 : 15; }
+function timeForQ(q) { return q.level === "sent" || q.mode === "connect" ? 30 : 15; }
 
 /* ================= content data ================= */
 // group: letters that look alike (used to pick tricky distractors)
@@ -122,7 +122,7 @@ const STRINGS = {
     title: "نجوم القراءة ⭐",
     level: "المستوى", lvlLetters: "الحروف", lvlWords: "الكلمات", lvlSent: "الجمل",
     mode: "اللعبة",
-    modeMatch: "الصورة والحرف", modeBuild: "رتّب", modeRead: "اقرأ لي",
+    modeMatch: "الصورة والحرف", modeConnect: "وصّل", modeBuild: "رتّب", modeRead: "اقرأ لي",
     letters: "الحروف المختارة", all: "الكل",
     count: "كم عدد الأسئلة؟",
     timer: "المؤقت", timerOn: "⏱️ يعمل", timerOff: "🚫 بدون",
@@ -134,6 +134,8 @@ const STRINGS = {
     insPicWord: "اختر الكلمة الصحيحة",
     insBuild: "ركّب الكلمة",
     insSent: "رتّب الجملة",
+    insConnect: "اسحب كل كلمة إلى صورتها",
+    insOrder: "اسحب الكلمات إلى أماكنها لترتيب الجملة",
     insRead: "🎤 اقرأ بصوت عالٍ",
     timeUp: "انتهى الوقت! ⏰",
     answerIs: "الصحيح",
@@ -152,7 +154,7 @@ const STRINGS = {
     title: "Reading Stars ⭐",
     level: "Level", lvlLetters: "Letters", lvlWords: "Words", lvlSent: "Sentences",
     mode: "Game",
-    modeMatch: "Picture & letter", modeBuild: "Arrange", modeRead: "Read to me",
+    modeMatch: "Picture & letter", modeConnect: "Connect", modeBuild: "Arrange", modeRead: "Read to me",
     letters: "Letters to practice", all: "All",
     count: "How many questions?",
     timer: "Timer", timerOn: "⏱️ On", timerOff: "🚫 Off",
@@ -164,6 +166,8 @@ const STRINGS = {
     insPicWord: "Tap the right word",
     insBuild: "Build the word",
     insSent: "Arrange the sentence",
+    insConnect: "Drag each word to its picture",
+    insOrder: "Drag the words into their places",
     insRead: "🎤 Read out loud",
     timeUp: "Time's up! ⏰",
     answerIs: "The answer is",
@@ -182,7 +186,7 @@ const STRINGS = {
     title: "Lese-Sterne ⭐",
     level: "Stufe", lvlLetters: "Buchstaben", lvlWords: "Wörter", lvlSent: "Sätze",
     mode: "Spiel",
-    modeMatch: "Bild & Buchstabe", modeBuild: "Ordnen", modeRead: "Lies mir vor",
+    modeMatch: "Bild & Buchstabe", modeConnect: "Verbinden", modeBuild: "Ordnen", modeRead: "Lies mir vor",
     letters: "Buchstaben zum Üben", all: "Alle",
     count: "Wie viele Aufgaben?",
     timer: "Zeitlimit", timerOn: "⏱️ An", timerOff: "🚫 Aus",
@@ -194,6 +198,8 @@ const STRINGS = {
     insPicWord: "Tippe auf das richtige Wort",
     insBuild: "Baue das Wort",
     insSent: "Ordne den Satz",
+    insConnect: "Ziehe jedes Wort zu seinem Bild",
+    insOrder: "Ziehe die Wörter an ihre Plätze",
     insRead: "🎤 Lies laut vor",
     timeUp: "Zeit ist um! ⏰",
     answerIs: "Richtig ist",
@@ -220,8 +226,8 @@ let settings = loadSettings();
 
 function validModes(level) {
   if (level === "letters") return ["match", "read"];
-  if (level === "words") return ["match", "build", "read"];
-  return ["build", "read"]; // sentences
+  if (level === "words") return ["match", "connect", "build", "read"];
+  return ["build", "connect", "read"]; // sentences
 }
 
 function loadSettings() {
@@ -373,10 +379,13 @@ function makeQ(cfg) {
   if (lv === "letters") return m === "read" ? qReadLetter(cfg) : qLetterMatch(cfg);
   if (lv === "words") {
     if (m === "match") return qPic(cfg);
+    if (m === "connect") return qConnect(cfg);
     if (m === "build") return qBuild(cfg);
     return qReadWord(cfg);
   }
-  return m === "build" ? qSentBuild(cfg) : qReadSent(cfg);
+  if (m === "build") return qSentBuild(cfg);
+  if (m === "connect") return qOrder(cfg);
+  return qReadSent(cfg);
 }
 
 function makeCards(correct, distractors, n) {
@@ -460,6 +469,38 @@ function qBuild(cfg) {
     insKey: "insBuild",
     promptEmoji: w.e, tiles, accepted: [w.b], targetShow: w.w, joiner: "",
     answerText: w.w,
+  };
+}
+
+// connect board: 4 words to drag onto their 4 pictures
+function qConnect(cfg) {
+  const first = pickWord(cfg);
+  const pairs = [first];
+  for (const x of shuffle(WORDS)) {
+    if (pairs.length >= 4) break;
+    if (!pairs.some(p => p.b === x.b || p.e === x.e || p.w === x.w)) pairs.push(x);
+  }
+  return {
+    mode: "connect", level: "words",
+    key: "C:" + pairs.map(p => p.b).sort().join(","), weakKey: null, // words are recorded one by one
+    insKey: "insConnect", pairs,
+    answerText: pairs.map(p => `${p.w} ${p.e}`).join(" · "),
+  };
+}
+
+// drag the sentence's words into ordered slots
+function qOrder(cfg) {
+  const idx = pickSentenceIdx(cfg);
+  const s = SENTENCES[idx];
+  const accepted = [s.t.join(" ")];
+  if (s.sw) accepted.push([s.t[1], s.t[0], ...s.t.slice(2)].join(" "));
+  let tiles = shuffle([...s.t]);
+  for (let i = 0; i < 10 && accepted.includes(tiles.join(" ")); i++) tiles = shuffle([...s.t]);
+  return {
+    mode: "connect", level: "sent", key: "T:" + idx, weakKey: "T:" + idx,
+    insKey: "insOrder",
+    promptEmoji: s.e, tiles, accepted, targetShow: s.t.join(" "),
+    answerText: s.t.join(" "), sent: true,
   };
 }
 
@@ -649,6 +690,12 @@ function nextQuestion() {
   }
   $("builder").hidden = q.mode !== "build";
   if (q.mode === "build") buildTiles(q);
+  const connectWords = q.mode === "connect" && q.level === "words";
+  const orderSent = q.mode === "connect" && q.level === "sent";
+  $("connect").hidden = !connectWords;
+  $("order").hidden = !orderSent;
+  if (connectWords) renderConnect(q);
+  if (orderSent) renderOrder(q);
   $("grade").hidden = q.mode !== "read";
 
   $("progress-text").textContent = `${quiz.index + 1} / ${quiz.questions.length}`;
@@ -698,6 +745,131 @@ function onTile(q, btn, ch) {
       // correct sentences keep the kid's own valid order; words show the vocalized form
       $("built").textContent = good && q.sent ? text : q.targetShow;
     });
+  }
+}
+
+/* ---- pointer-based dragging (fingers on iPad, mouse on desktop) ---- */
+function makeDraggable(el, onDrop) {
+  el.addEventListener("pointerdown", e => {
+    if (!quiz || quiz.locked || el.classList.contains("paired") || el.classList.contains("used")) return;
+    e.preventDefault();
+    const ghost = el.cloneNode(true);
+    ghost.classList.add("ghost");
+    ghost.style.width = el.offsetWidth + "px";
+    document.body.appendChild(ghost);
+    el.classList.add("dragging");
+    const place = ev => {
+      ghost.style.left = (ev.clientX - ghost.offsetWidth / 2) + "px";
+      ghost.style.top = (ev.clientY - ghost.offsetHeight / 2) + "px";
+    };
+    place(e);
+    const move = ev => { ev.preventDefault(); place(ev); };
+    const up = ev => {
+      document.removeEventListener("pointermove", move);
+      document.removeEventListener("pointerup", up);
+      document.removeEventListener("pointercancel", up);
+      ghost.remove();
+      el.classList.remove("dragging");
+      const under = document.elementFromPoint(ev.clientX, ev.clientY);
+      onDrop(under ? under.closest("[data-drop]") : null);
+    };
+    document.addEventListener("pointermove", move, { passive: false });
+    document.addEventListener("pointerup", up);
+    document.addEventListener("pointercancel", up);
+  });
+}
+
+/* ---- connect: 4 pictures (right) ↔ 4 words (left) ---- */
+function renderConnect(q) {
+  quiz.pairsDone = 0;
+  quiz.connectMistakes = 0;
+  quiz.wrongWords = new Set();
+  const pics = $("c-pics"), words = $("c-words");
+  pics.innerHTML = "";
+  words.innerHTML = "";
+  for (const p of shuffle(q.pairs)) {
+    const d = document.createElement("div");
+    d.className = "ccard pic";
+    d.textContent = p.e;
+    d.dataset.b = p.b;
+    d.dataset.drop = "1";
+    pics.appendChild(d);
+  }
+  for (const p of shuffle(q.pairs)) {
+    const d = document.createElement("div");
+    d.className = "ccard word";
+    d.textContent = p.w;
+    d.dataset.b = p.b;
+    makeDraggable(d, target => onConnectDrop(q, d, target));
+    words.appendChild(d);
+  }
+}
+
+function onConnectDrop(q, wordEl, target) {
+  if (!quiz || quiz.locked || !target || !target.classList.contains("pic") || target.classList.contains("paired")) return;
+  const b = wordEl.dataset.b;
+  if (target.dataset.b === b) {
+    wordEl.classList.add("paired");
+    target.classList.add("paired");
+    target.textContent = `${target.textContent} ✓`;
+    recordResult("W:" + b, !quiz.wrongWords.has(b));
+    quiz.pairsDone++;
+    beep([880], 0.09);
+    if (quiz.pairsDone === q.pairs.length) {
+      finishAnswer(quiz.connectMistakes === 0, q, null);
+    }
+  } else {
+    quiz.connectMistakes++;
+    quiz.wrongWords.add(b);
+    recordResult("W:" + b, false);
+    target.classList.remove("wrongflash");
+    void target.offsetWidth; // restart the animation
+    target.classList.add("wrongflash");
+    soundBad();
+  }
+}
+
+/* ---- order: drag sentence words into slots ---- */
+function renderOrder(q) {
+  const slots = $("slots"), pool = $("pool");
+  slots.innerHTML = "";
+  pool.innerHTML = "";
+  for (let i = 0; i < q.tiles.length; i++) {
+    const s = document.createElement("div");
+    s.className = "slot";
+    s.dataset.drop = "1";
+    s.dataset.slot = i;
+    s.onclick = () => { // tap a filled slot to send its word back to the pool
+      if (quiz.locked || !s.dataset.word) return;
+      const tile = pool.querySelector(`.otile.used[data-word="${s.dataset.word}"]`);
+      if (tile) tile.classList.remove("used");
+      delete s.dataset.word;
+      s.textContent = "";
+      s.classList.remove("filled");
+    };
+    slots.appendChild(s);
+  }
+  q.tiles.forEach((word, i) => {
+    const t = document.createElement("div");
+    t.className = "otile";
+    t.textContent = word;
+    t.dataset.word = word;
+    t.dataset.i = i;
+    makeDraggable(t, target => onOrderDrop(q, t, target));
+    pool.appendChild(t);
+  });
+}
+
+function onOrderDrop(q, tile, target) {
+  if (!quiz || quiz.locked || !target || !target.classList.contains("slot") || target.dataset.word) return;
+  target.dataset.word = tile.dataset.word;
+  target.textContent = tile.dataset.word;
+  target.classList.add("filled");
+  tile.classList.add("used");
+  const slotEls = [...document.querySelectorAll("#slots .slot")];
+  if (slotEls.every(s => s.dataset.word)) {
+    const text = slotEls.map(s => s.dataset.word).join(" ");
+    finishAnswer(q.accepted.includes(text), q, null);
   }
 }
 

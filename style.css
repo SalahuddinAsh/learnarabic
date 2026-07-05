@@ -158,6 +158,41 @@ h2 { font-size: 1.05rem; margin: 0 0 10px; color: #55786f; font-weight: 600; }
 .tile-back { background: #ffe9d6; color: #e07b1d; }
 .built.sent-built { font-size: 1.7rem; max-width: 100%; padding: 8px 14px; line-height: 2; }
 
+/* connect: words ↔ pictures */
+.connect { display: flex; gap: 12px; margin-top: auto; }
+.connect[hidden] { display: none; }
+.c-col { flex: 1; display: flex; flex-direction: column; gap: 10px; }
+.ccard {
+  background: #fff; border-radius: 18px; min-height: 68px;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 800; box-shadow: 0 4px 12px rgba(9, 70, 60, .22);
+  padding: 6px 10px;
+}
+.ccard.pic { font-size: 2.7rem; }
+.ccard.word { font-size: 1.55rem; line-height: 1.9; touch-action: none; cursor: grab; color: #1f3d3a; }
+.ccard.paired { background: #e2fbe9; box-shadow: inset 0 0 0 3px #3ddc84; opacity: .85; pointer-events: none; }
+.ccard.wrongflash { animation: shake .4s; background: #ffe6ea; }
+.dragging { opacity: .35; }
+.ghost { position: fixed; z-index: 99; pointer-events: none; opacity: .9; transform: scale(1.06); }
+
+/* order: sentence words into slots */
+.order { display: flex; flex-direction: column; gap: 16px; margin-top: auto; }
+.order[hidden] { display: none; }
+.slots, .pool { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.slot {
+  min-width: 78px; min-height: 58px; border: 3px dashed #b5e6de; border-radius: 14px;
+  background: rgba(255, 255, 255, .55); display: flex; align-items: center; justify-content: center;
+  font-weight: 800; font-size: 1.4rem; line-height: 1.9; padding: 4px 12px; color: #0d6e63;
+}
+.slot.filled { border-style: solid; border-color: #0d9488; background: #fff; cursor: pointer; }
+.otile {
+  background: #fff; border-radius: 14px; min-height: 58px; padding: 6px 16px;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 800; font-size: 1.4rem; line-height: 1.9; color: #1f3d3a;
+  box-shadow: 0 4px 12px rgba(9, 70, 60, .22); touch-action: none; cursor: grab;
+}
+.otile.used { visibility: hidden; }
+
 /* parent grading */
 .grade { display: flex; gap: 14px; margin-top: auto; }
 .grade[hidden] { display: none; }

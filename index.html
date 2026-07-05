@@ -42,6 +42,7 @@
         <h2 id="t-mode">اللعبة</h2>
         <div class="chip-row" id="mode-row">
           <button class="chip op-chip" data-mode="match" type="button"><span class="op-sym">🖼️</span><span class="op-name" data-t="modeMatch">الصورة والحرف</span></button>
+          <button class="chip op-chip" data-mode="connect" type="button"><span class="op-sym">🔗</span><span class="op-name" data-t="modeConnect">وصّل</span></button>
           <button class="chip op-chip" data-mode="build" type="button"><span class="op-sym">🧩</span><span class="op-name" data-t="modeBuild">رتّب</span></button>
           <button class="chip op-chip" data-mode="read"  type="button"><span class="op-sym">🎤</span><span class="op-name" data-t="modeRead">اقرأ لي</span></button>
         </div>
@@ -99,6 +100,16 @@
 
       <div class="builder" id="builder" hidden>
         <div class="tiles" id="tiles" dir="rtl"></div>
+      </div>
+
+      <div class="connect" id="connect" hidden dir="rtl">
+        <div class="c-col" id="c-pics"></div>
+        <div class="c-col" id="c-words"></div>
+      </div>
+
+      <div class="order" id="order" hidden>
+        <div class="slots" id="slots" dir="rtl"></div>
+        <div class="pool" id="pool" dir="rtl"></div>
       </div>
 
       <div class="grade" id="grade" hidden dir="ltr">
