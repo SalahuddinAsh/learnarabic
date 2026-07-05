@@ -1,6 +1,6 @@
 "use strict";
 
-const APP_VERSION = "2.0.0";
+const APP_VERSION = "2.1.0";
 
 /* ================= tunable constants ================= */
 const COUNT_OPTIONS = [5, 10, 15, 20];
@@ -89,25 +89,26 @@ const WORDS = [
   { w: "رِيشَة", b: "ريشة", e: "🪶" },
 ];
 
-// simple vocalized sentences (3–5 words) with an emoji hint
+// simple vocalized sentences (3–5 words) with an emoji hint.
+// sw: the first two words may swap (verb-first and subject-first are both correct)
 const SENTENCES = [
-  { t: ["القِطُّ", "يَشْرَبُ", "الحَلِيبَ"], e: "🐱🥛" },
+  { t: ["القِطُّ", "يَشْرَبُ", "الحَلِيبَ"], e: "🐱🥛", sw: true },
   { t: ["الشَّمْسُ", "فِي", "السَّمَاءِ"], e: "☀️" },
   { t: ["السَّمَكَةُ", "فِي", "المَاءِ"], e: "🐟💧" },
-  { t: ["الوَلَدُ", "يَقْرَأُ", "الكِتَابَ"], e: "👦📖" },
-  { t: ["البِنْتُ", "تَشْرَبُ", "الحَلِيبَ"], e: "👧🥛" },
-  { t: ["الوَلَدُ", "يَلْعَبُ", "بِالكُرَةِ"], e: "👦⚽" },
+  { t: ["الوَلَدُ", "يَقْرَأُ", "الكِتَابَ"], e: "👦📖", sw: true },
+  { t: ["البِنْتُ", "تَشْرَبُ", "الحَلِيبَ"], e: "👧🥛", sw: true },
+  { t: ["الوَلَدُ", "يَلْعَبُ", "بِالكُرَةِ"], e: "👦⚽", sw: true },
   { t: ["الطَّائِرُ", "فَوْقَ", "الشَّجَرَةِ"], e: "🐦🌳" },
-  { t: ["القَمَرُ", "يَظْهَرُ", "فِي", "اللَّيْلِ"], e: "🌙" },
+  { t: ["القَمَرُ", "يَظْهَرُ", "فِي", "اللَّيْلِ"], e: "🌙", sw: true },
   { t: ["أَنَا", "أُحِبُّ", "أُمِّي"], e: "❤️" },
   { t: ["الفِيلُ", "حَيَوَانٌ", "كَبِيرٌ"], e: "🐘" },
   { t: ["الأَسَدُ", "مَلِكُ", "الغَابَةِ"], e: "🦁" },
   { t: ["البَيْتُ", "جَمِيلٌ", "وَنَظِيفٌ"], e: "🏠✨" },
-  { t: ["أَكَلَ", "الوَلَدُ", "التُّفَّاحَةَ"], e: "👦🍎" },
-  { t: ["رَكِبَ", "الأَبُ", "السَّيَّارَةَ"], e: "👨🚗" },
-  { t: ["النَّحْلَةُ", "تَصْنَعُ", "العَسَلَ"], e: "🐝🍯" },
-  { t: ["المَطَرُ", "يَنْزِلُ", "مِنَ", "السَّمَاءِ"], e: "🌧️" },
-  { t: ["الكَلْبُ", "يَحْرُسُ", "البَيْتَ"], e: "🐕🏠" },
+  { t: ["أَكَلَ", "الوَلَدُ", "التُّفَّاحَةَ"], e: "👦🍎", sw: true },
+  { t: ["رَكِبَ", "الأَبُ", "السَّيَّارَةَ"], e: "👨🚗", sw: true },
+  { t: ["النَّحْلَةُ", "تَصْنَعُ", "العَسَلَ"], e: "🐝🍯", sw: true },
+  { t: ["المَطَرُ", "يَنْزِلُ", "مِنَ", "السَّمَاءِ"], e: "🌧️", sw: true },
+  { t: ["الكَلْبُ", "يَحْرُسُ", "البَيْتَ"], e: "🐕🏠", sw: true },
   { t: ["القِطَارُ", "سَرِيعٌ", "جِدًّا"], e: "🚂" },
   { t: ["أَشْرَبُ", "المَاءَ", "البَارِدَ"], e: "💧" },
   { t: ["الفَرَاشَةُ", "فَوْقَ", "الوَرْدَةِ"], e: "🦋🌹" },
@@ -457,7 +458,7 @@ function qBuild(cfg) {
   return {
     mode: "build", level: "words", key: "W:" + w.b, weakKey: "W:" + w.b,
     insKey: "insBuild",
-    promptEmoji: w.e, tiles, target: w.b, targetShow: w.w, joiner: "",
+    promptEmoji: w.e, tiles, accepted: [w.b], targetShow: w.w, joiner: "",
     answerText: w.w,
   };
 }
@@ -475,12 +476,15 @@ function qReadWord(cfg) {
 function qSentBuild(cfg) {
   const idx = pickSentenceIdx(cfg);
   const s = SENTENCES[idx];
+  // every accepted word order counts as correct (verb-first or subject-first)
+  const accepted = [s.t.join(" ")];
+  if (s.sw) accepted.push([s.t[1], s.t[0], ...s.t.slice(2)].join(" "));
   let tiles = shuffle([...s.t]);
-  for (let i = 0; i < 10 && tiles.join(" ") === s.t.join(" "); i++) tiles = shuffle([...s.t]);
+  for (let i = 0; i < 10 && accepted.includes(tiles.join(" ")); i++) tiles = shuffle([...s.t]);
   return {
     mode: "build", level: "sent", key: "T:" + idx, weakKey: "T:" + idx,
     insKey: "insSent",
-    promptEmoji: s.e, tiles, target: s.t.join(" "), targetShow: s.t.join(" "), joiner: " ",
+    promptEmoji: s.e, tiles, accepted, targetShow: s.t.join(" "), joiner: " ",
     answerText: s.t.join(" "), sent: true,
   };
 }
@@ -689,7 +693,11 @@ function onTile(q, btn, ch) {
   const text = quiz.built.map(x => x.ch).join(q.joiner);
   $("built").textContent = text;
   if (quiz.built.length === q.tiles.length) {
-    finishAnswer(text === q.target, q, () => { $("built").textContent = q.targetShow; });
+    const good = q.accepted.includes(text);
+    finishAnswer(good, q, () => {
+      // correct sentences keep the kid's own valid order; words show the vocalized form
+      $("built").textContent = good && q.sent ? text : q.targetShow;
+    });
   }
 }
 
