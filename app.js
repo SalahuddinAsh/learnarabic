@@ -1,6 +1,6 @@
 "use strict";
 
-const APP_VERSION = "2.2.0";
+const APP_VERSION = "2.3.0";
 
 /* ================= tunable constants ================= */
 const COUNT_OPTIONS = [5, 10, 15, 20];
@@ -126,6 +126,10 @@ const STRINGS = {
     letters: "الحروف المختارة", all: "الكل",
     count: "كم عدد الأسئلة؟",
     timer: "المؤقت", timerOn: "⏱️ يعمل", timerOff: "🚫 بدون",
+    game: "نقاط فتح اللعبة", gameOff: "🚫 إيقاف",
+    gameNote: "احصل على هذه النقاط في التمرين لتفتح جولة من لعبة المظلات 🪂",
+    gamePlay: "!العب لعبة المظلات 🪂",
+    gameOver: "انتهت اللعبة! 🪂",
     start: "!ابدأ 🚀",
     hintLetters: "اختر حرفًا واحدًا على الأقل",
     insPickLetter: "بأي حرف تبدأ الصورة؟",
@@ -158,6 +162,10 @@ const STRINGS = {
     letters: "Letters to practice", all: "All",
     count: "How many questions?",
     timer: "Timer", timerOn: "⏱️ On", timerOff: "🚫 Off",
+    game: "Game unlock score", gameOff: "🚫 Off",
+    gameNote: "Score at least this much to unlock one round of Falling Pictures 🪂",
+    gamePlay: "🪂 Play Falling Pictures!",
+    gameOver: "Game over! 🪂",
     start: "Start! 🚀",
     hintLetters: "Pick at least one letter",
     insPickLetter: "Which letter does the picture start with?",
@@ -190,6 +198,10 @@ const STRINGS = {
     letters: "Buchstaben zum Üben", all: "Alle",
     count: "Wie viele Aufgaben?",
     timer: "Zeitlimit", timerOn: "⏱️ An", timerOff: "🚫 Aus",
+    game: "Punkte fürs Spiel", gameOff: "🚫 Aus",
+    gameNote: "Erreiche diese Punktzahl, um eine Runde Fallende Bilder freizuschalten 🪂",
+    gamePlay: "🪂 Fallende Bilder spielen!",
+    gameOver: "Game over! 🪂",
     start: "Los! 🚀",
     hintLetters: "Wähle mindestens einen Buchstaben",
     insPickLetter: "Mit welchem Buchstaben beginnt das Bild?",
@@ -220,7 +232,7 @@ const STRINGS = {
 const DEFAULTS = {
   lang: "ar", level: "letters", mode: "match",
   letters: [...ALL_LETTER_CHARS],
-  count: 10, timed: false, sound: true,
+  count: 10, timed: false, sound: true, gameScore: 700,
 };
 let settings = loadSettings();
 
@@ -244,6 +256,7 @@ function loadSettings() {
       count: COUNT_OPTIONS.includes(s.count) ? s.count : DEFAULTS.count,
       timed: s.timed === true,
       sound: s.sound !== false,
+      gameScore: [0, 500, 700, 800, 900].includes(s.gameScore) ? s.gameScore : DEFAULTS.gameScore,
     };
   } catch { return { ...DEFAULTS }; }
 }
@@ -581,6 +594,9 @@ function buildSetup() {
   document.querySelectorAll("#timer-row .chip").forEach(chip => {
     chip.onclick = () => { settings.timed = chip.dataset.timed === "1"; refreshSetup(); };
   });
+  document.querySelectorAll("#game-row .chip").forEach(chip => {
+    chip.onclick = () => { settings.gameScore = +chip.dataset.game; refreshSetup(); };
+  });
   document.querySelectorAll(".lang-chip:not(.sound-btn)").forEach(chip => {
     chip.onclick = () => { settings.lang = chip.dataset.lang; applyLang(); refreshSetup(); };
   });
@@ -602,6 +618,7 @@ function refreshSetup() {
   document.querySelectorAll("#count-row .chip").forEach(c => c.classList.toggle("selected", +c.dataset.count === settings.count));
   $("timer-group").hidden = settings.mode === "read";
   document.querySelectorAll("#timer-row .chip").forEach(c => c.classList.toggle("selected", (c.dataset.timed === "1") === settings.timed));
+  document.querySelectorAll("#game-row .chip").forEach(c => c.classList.toggle("selected", +c.dataset.game === settings.gameScore));
   $("btn-sound").textContent = settings.sound ? "🔊" : "🔇";
 
   let hint = "";
@@ -622,6 +639,10 @@ function applyLang() {
   $("btn-all").textContent = t.all;
   $("t-count").textContent = t.count;
   $("t-timer").textContent = t.timer;
+  $("t-game").textContent = t.game;
+  $("game-note").textContent = t.gameNote;
+  $("btn-play-game").textContent = t.gamePlay;
+  $("go-title").textContent = t.gameOver;
   $("btn-start").textContent = t.start;
   $("t-score").textContent = t.score;
   $("t-review").textContent = t.review;
@@ -980,6 +1001,9 @@ function finishQuiz() {
   $("sub-score").textContent = `✓ ${quiz.correct} / ${total}`;
   $("cheer").textContent = T()["cheer" + stars];
 
+  // qualifying score earns one round of the parachute game
+  $("btn-play-game").hidden = !(settings.gameScore > 0 && score >= settings.gameScore);
+
   const best = loadBest();
   const bestLine = $("best-line");
   if (score > (best[quiz.bestKey] || 0)) {
@@ -1007,6 +1031,162 @@ function finishQuiz() {
   quiz = null;
   showScreen("results");
 }
+
+/* ================= Falling Pictures (reward game) =================
+   Pictures parachute down; the kid taps the letter each picture's word
+   starts with. Weak letters spawn more often. */
+let game = null;
+
+function startGame() {
+  if ($("btn-play-game").hidden) return; // no ticket, no game
+  $("btn-play-game").hidden = true;      // the ticket is spent
+  document.querySelectorAll("#sky .fall").forEach(el => el.remove());
+  $("game-over").hidden = true;
+  const cfg = buildCfg();
+  game = {
+    pool: cfg.letterPool, weakL: cfg.weak.L,
+    score: 0, lives: 3, items: [],
+    speed: 22, spawnEvery: 3300, sinceSpawn: 2800,
+    over: false, prev: performance.now(), raf: null,
+  };
+  updateGameHud();
+  refreshLetterPanel();
+  showScreen("game");
+  game.raf = requestAnimationFrame(gameTick);
+}
+
+function updateGameHud() {
+  $("game-lives").textContent = "❤️".repeat(game.lives) || "💔";
+  $("game-score").textContent = `🪂 ${game.score}`;
+}
+
+function gameTick(now) {
+  if (!game || game.over) return;
+  const dt = Math.min(0.1, (now - game.prev) / 1000);
+  game.prev = now;
+  const H = $("sky").clientHeight;
+  game.sinceSpawn += dt * 1000;
+  if (game.sinceSpawn >= game.spawnEvery && game.items.length < 3) {
+    spawnItem();
+    game.sinceSpawn = 0;
+  }
+  for (const it of [...game.items]) {
+    it.y += game.speed * dt;
+    it.el.style.top = it.y + "px";
+    if (it.y > H - 80) itemLanded(it);
+  }
+  game.raf = requestAnimationFrame(gameTick);
+}
+
+function spawnItem() {
+  const useWeak = game.weakL.length && Math.random() < WEAK_BIAS;
+  const c = useWeak ? pick(game.weakL) : pick(game.pool);
+  const candidates = WORDS.filter(w => w.b[0] === c && !game.items.some(it => it.e === w.e));
+  if (!candidates.length) return;
+  const w = pick(candidates);
+  const el = document.createElement("div");
+  el.className = "fall";
+  el.innerHTML = `<span class="chute">🪂</span><span class="cargo">${w.e}</span>`;
+  el.style.left = (8 + Math.random() * 70) + "%";
+  el.style.top = "-90px";
+  $("sky").appendChild(el);
+  game.items.push({ c, e: w.e, el, y: -90 });
+  refreshLetterPanel();
+}
+
+// 8 letter buttons: the answers for what's falling, padded with look-alikes
+function refreshLetterPanel() {
+  const need = [...new Set(game.items.map(it => it.c))];
+  const fillers = [];
+  for (const c of need) {
+    const L = letterByChar(c);
+    for (const x of LETTERS) if (x.group === L.group && x.c !== c) fillers.push(x.c);
+  }
+  fillers.push(...shuffle(game.pool));
+  fillers.push(...shuffle(ALL_LETTER_CHARS));
+  const taken = new Set(need);
+  const letters = [...need, ...takeDistinct(taken, fillers, 8 - need.length)];
+  const panel = $("game-letters");
+  panel.innerHTML = "";
+  for (const c of shuffle(letters)) {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "lkey"; b.textContent = c;
+    b.onclick = () => onLetterKey(c, b);
+    panel.appendChild(b);
+  }
+}
+
+function onLetterKey(c, btn) {
+  if (!game || game.over) return;
+  const hit = game.items.filter(it => it.c === c).sort((a, b) => b.y - a.y)[0];
+  if (hit) {
+    zapItem(hit);
+    recordResult("L:" + c, true);
+  } else {
+    btn.classList.remove("wrongflash");
+    void btn.offsetWidth;
+    btn.classList.add("wrongflash");
+    soundBad();
+  }
+}
+
+function zapItem(it) {
+  it.el.innerHTML = "💥";
+  it.el.classList.add("boom");
+  const el = it.el;
+  game.items = game.items.filter(x => x !== it);
+  setTimeout(() => el.remove(), 400);
+  game.score += 10;
+  game.speed += 1.2;
+  game.spawnEvery = Math.max(1500, game.spawnEvery - 55);
+  updateGameHud();
+  refreshLetterPanel();
+  beep([880, 1320], 0.08);
+}
+
+function itemLanded(it) {
+  it.el.innerHTML = "💥";
+  it.el.classList.add("boom");
+  const el = it.el;
+  game.items = game.items.filter(x => x !== it);
+  setTimeout(() => el.remove(), 400);
+  recordResult("L:" + it.c, false);
+  game.lives--;
+  updateGameHud();
+  soundBad();
+  if (game.lives <= 0) { endGame(); return; }
+  // fresh sky after losing a life: keep the pace, short breather
+  for (const other of game.items) other.el.remove();
+  game.items = [];
+  game.sinceSpawn = -1500;
+  refreshLetterPanel();
+}
+
+function endGame() {
+  game.over = true;
+  if (game.raf) cancelAnimationFrame(game.raf);
+  const best = loadBest();
+  const prev = best.fall || 0;
+  $("go-score").textContent = `🪂 ${game.score}`;
+  if (game.score > prev) {
+    best.fall = game.score;
+    saveBest(best);
+    $("go-best").textContent = T().newRecord;
+  } else {
+    $("go-best").textContent = `${T().best}: ${prev}`;
+  }
+  $("game-over").hidden = false;
+}
+
+function quitGame(target) {
+  if (game && game.raf) cancelAnimationFrame(game.raf);
+  game = null;
+  showScreen(target);
+}
+
+$("btn-play-game").onclick = startGame;
+$("btn-game-quit").onclick = () => quitGame("results");
+$("btn-game-done").onclick = () => quitGame("results");
 
 /* ================= wiring ================= */
 $("btn-good").onclick = () => onGrade(true);
