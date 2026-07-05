@@ -231,6 +231,8 @@ h2 { font-size: 1.05rem; margin: 0 0 10px; color: #55786f; font-weight: 600; }
 }
 .game-entry-box[hidden] { display: none; }
 .lkeys { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.lkeys.few { display: flex; flex-wrap: wrap; justify-content: center; }
+.lkeys.few .lkey { flex: 0 0 auto; min-width: 74px; padding: 0 20px; }
 .lkey:disabled { opacity: .25; }
 .lkey {
   border: none; border-radius: 18px; background: #fff; color: #1f3d3a;

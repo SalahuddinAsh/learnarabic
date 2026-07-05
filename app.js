@@ -1,6 +1,6 @@
 "use strict";
 
-const APP_VERSION = "2.4.2";
+const APP_VERSION = "2.4.3";
 
 /* ================= tunable constants ================= */
 const COUNT_OPTIONS = [5, 10, 15, 20];
@@ -1113,16 +1113,16 @@ function spawnItem() {
   else buildWordPanel(w);
 }
 
-// spelling panel: the word's letters (with duplicates) padded with distractors
+// spelling panel: exactly the word's letters, shuffled — the kid orders them
 function buildWordPanel(w) {
   game.entry = "";
   $("game-entry").textContent = " ";
-  const keys = [...w.b];
-  const taken = new Set(keys);
-  keys.push(...takeDistinct(taken, shuffle(ALL_LETTER_CHARS), Math.max(0, 8 - keys.length)));
+  let keys = shuffle([...w.b]);
+  for (let i = 0; i < 10 && keys.join("") === w.b && w.b.length > 1; i++) keys = shuffle([...w.b]);
   const panel = $("game-letters");
+  panel.classList.add("few");
   panel.innerHTML = "";
-  for (const c of shuffle(keys)) {
+  for (const c of keys) {
     const b = document.createElement("button");
     b.type = "button"; b.className = "lkey"; b.textContent = c;
     b.onclick = () => onLetterKey(c, b);
@@ -1143,6 +1143,7 @@ function refreshLetterPanel() {
   const taken = new Set(need);
   const letters = [...need, ...takeDistinct(taken, fillers, 8 - need.length)];
   const panel = $("game-letters");
+  panel.classList.remove("few");
   panel.innerHTML = "";
   for (const c of shuffle(letters)) {
     const b = document.createElement("button");
