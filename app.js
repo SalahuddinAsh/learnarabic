@@ -1,6 +1,6 @@
 "use strict";
 
-const APP_VERSION = "2.4.0";
+const APP_VERSION = "2.4.1";
 
 /* ================= tunable constants ================= */
 const COUNT_OPTIONS = [5, 10, 15, 20];
@@ -665,6 +665,7 @@ function startQuiz() {
   const questions = Array.from({ length: settings.count }, () => genQuestion(cfg, recent));
   quiz = {
     questions, index: 0, correct: 0, points: 0, missed: [],
+    gameEligible: settings.mode !== "read", // parent-graded reading earns no game
     bestKey: `${settings.mode}:${settings.level}`,
     timerId: null, timerStart: 0, timerTotal: 1, locked: false, built: [],
   };
@@ -1001,8 +1002,8 @@ function finishQuiz() {
   $("sub-score").textContent = `✓ ${quiz.correct} / ${total}`;
   $("cheer").textContent = T()["cheer" + stars];
 
-  // qualifying score earns one round of the parachute game
-  $("btn-play-game").hidden = !(settings.gameScore > 0 && score >= settings.gameScore);
+  // qualifying score earns one round of the parachute game (not in read-to-me)
+  $("btn-play-game").hidden = !(quiz.gameEligible && settings.gameScore > 0 && score >= settings.gameScore);
 
   const best = loadBest();
   const bestLine = $("best-line");
@@ -1082,7 +1083,7 @@ function gameTick(now) {
   for (const it of [...game.items]) {
     it.y += game.speed * dt;
     it.el.style.top = it.y + "px";
-    if (it.y > H - 80) itemLanded(it);
+    if (it.y > H - 110) itemLanded(it);
   }
   game.raf = requestAnimationFrame(gameTick);
 }
@@ -1104,10 +1105,10 @@ function spawnItem() {
   const el = document.createElement("div");
   el.className = "fall";
   el.innerHTML = `<span class="chute">🪂</span><span class="cargo">${w.e}</span>`;
-  el.style.left = (8 + Math.random() * 70) + "%";
-  el.style.top = "-90px";
+  el.style.left = (5 + Math.random() * 65) + "%";
+  el.style.top = "-130px";
   $("sky").appendChild(el);
-  game.items.push({ c: w.b[0], b: w.b, e: w.e, el, y: -90 });
+  game.items.push({ c: w.b[0], b: w.b, e: w.e, el, y: -130 });
   if (game.kind === "letters") refreshLetterPanel();
   else buildWordPanel(w);
 }
