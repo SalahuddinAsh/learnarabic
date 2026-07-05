@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Reading Stars</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Reading Stars">
+  <meta name="theme-color" content="#0d9488">
+</head>
+<body>
+
+  <!-- ============ SETUP SCREEN ============ -->
+  <section id="screen-setup" class="screen active">
+    <div class="card">
+      <div class="setup-top">
+        <h1 id="t-title">نجوم القراءة ⭐</h1>
+        <div class="lang-row" id="lang-row">
+          <button class="lang-chip" data-lang="ar" type="button">ع</button>
+          <button class="lang-chip" data-lang="en" type="button">EN</button>
+          <button class="lang-chip" data-lang="de" type="button">DE</button>
+          <button class="lang-chip sound-btn" id="btn-sound" type="button">🔊</button>
+        </div>
+      </div>
+
+      <div class="setup-group">
+        <h2 id="t-level">المستوى</h2>
+        <div class="chip-row" id="level-row">
+          <button class="chip op-chip" data-level="1" type="button"><span class="op-sym">أ</span><span class="op-name" data-t="lvl1">الحروف</span></button>
+          <button class="chip op-chip" data-level="2" type="button"><span class="op-sym">بـ</span><span class="op-name" data-t="lvl2">أشكال الحروف</span></button>
+          <button class="chip op-chip" data-level="3" type="button"><span class="op-sym">بَ</span><span class="op-name" data-t="lvl3">المقاطع</span></button>
+          <button class="chip op-chip" data-level="4" type="button"><span class="op-sym">🐱</span><span class="op-name" data-t="lvl4">الكلمات</span></button>
+        </div>
+      </div>
+
+      <div class="setup-group">
+        <h2 id="t-mode">اللعبة</h2>
+        <div class="chip-row" id="mode-row">
+          <button class="chip op-chip" data-mode="hear"  type="button"><span class="op-sym">👂</span><span class="op-name" data-t="modeHear">اسمع واختر</span></button>
+          <button class="chip op-chip" data-mode="pic"   type="button"><span class="op-sym">🖼️</span><span class="op-name" data-t="modePic">الكلمة والصورة</span></button>
+          <button class="chip op-chip" data-mode="build" type="button"><span class="op-sym">🧩</span><span class="op-name" data-t="modeBuild">ركّب الكلمة</span></button>
+          <button class="chip op-chip" data-mode="read"  type="button"><span class="op-sym">🎤</span><span class="op-name" data-t="modeRead">اقرأ لي</span></button>
+        </div>
+      </div>
+
+      <div class="setup-group" id="letters-group">
+        <h2 id="t-letters">الحروف المختارة</h2>
+        <div class="chip-row letters" id="letters-row" dir="rtl"></div>
+        <button class="chip all-chip" id="btn-all" type="button">الكل</button>
+      </div>
+
+      <div class="setup-group" id="harakat-group" hidden>
+        <h2 id="t-harakat">الحركات</h2>
+        <div class="chip-row" id="harakat-row" dir="rtl">
+          <button class="chip hk" data-hk="a" type="button" dir="rtl">بَ</button>
+          <button class="chip hk" data-hk="u" type="button" dir="rtl">بُ</button>
+          <button class="chip hk" data-hk="i" type="button" dir="rtl">بِ</button>
+          <button class="chip hk" data-hk="A" type="button" dir="rtl">با</button>
+          <button class="chip hk" data-hk="U" type="button" dir="rtl">بو</button>
+          <button class="chip hk" data-hk="I" type="button" dir="rtl">بي</button>
+        </div>
+      </div>
+
+      <div class="setup-group">
+        <h2 id="t-count">كم عدد الأسئلة؟</h2>
+        <div class="chip-row" id="count-row"></div>
+      </div>
+
+      <div class="setup-group" id="timer-group">
+        <h2 id="t-timer">المؤقت</h2>
+        <div class="chip-row" id="timer-row">
+          <button class="chip" data-timed="1" type="button" data-t="timerOn">⏱️ يعمل</button>
+          <button class="chip" data-timed="0" type="button" data-t="timerOff">🚫 بدون</button>
+        </div>
+      </div>
+
+      <button id="btn-start" class="big-btn" type="button" disabled>!ابدأ 🚀</button>
+      <p id="setup-hint" class="hint"></p>
+      <p class="version" id="app-version" dir="ltr"></p>
+    </div>
+  </section>
+
+  <!-- ============ QUIZ SCREEN ============ -->
+  <section id="screen-quiz" class="screen">
+    <div class="quiz-wrap">
+      <div class="quiz-top">
+        <button id="btn-quit" class="quit-btn" type="button">✕</button>
+        <div class="progress-text" id="progress-text" dir="ltr">1 / 10</div>
+        <div class="score-pill" id="score-pill" dir="ltr">⭐ 0</div>
+      </div>
+
+      <div class="timebar-row" id="timebar-row" dir="ltr">
+        <div class="timebar-track"><div class="timebar" id="timebar"></div></div>
+        <div class="time-left" id="time-left">15</div>
+      </div>
+
+      <div class="question-area">
+        <div class="instruction" id="instruction"></div>
+        <div class="prompt-row">
+          <button id="btn-say" class="say-btn" type="button" hidden>🔊</button>
+          <div class="prompt" id="prompt" dir="rtl"></div>
+        </div>
+        <div class="built" id="built" dir="rtl" hidden></div>
+        <div class="feedback" id="feedback"></div>
+      </div>
+
+      <div class="cards" id="cards" dir="rtl"></div>
+
+      <div class="builder" id="builder" hidden>
+        <div class="tiles" id="tiles" dir="rtl"></div>
+      </div>
+
+      <div class="grade" id="grade" hidden dir="ltr">
+        <button id="btn-bad" class="grade-btn bad" type="button">✗</button>
+        <button id="btn-good" class="grade-btn good" type="button">✓</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ RESULTS SCREEN ============ -->
+  <section id="screen-results" class="screen">
+    <div class="card results-card">
+      <div class="stars" id="stars">⭐⭐⭐</div>
+      <h1 id="t-score">نتيجتك</h1>
+      <div class="final-score" id="final-score" dir="ltr">850 <span class="of-1000">/ 1000</span></div>
+      <div class="sub-score" id="sub-score" dir="ltr">✓ 9 / 10</div>
+      <div class="best-line" id="best-line"></div>
+      <p class="cheer" id="cheer"></p>
+
+      <div class="missed" id="missed-wrap" hidden>
+        <h2 id="t-review">راجع هذه</h2>
+        <ul id="missed-list" dir="rtl"></ul>
+      </div>
+
+      <button id="btn-again" class="big-btn" type="button">العب مرة أخرى 🔁</button>
+      <button id="btn-settings" class="big-btn secondary" type="button">غيّر الإعدادات ⚙️</button>
+    </div>
+  </section>
+
+  <script src="app.js"></script>
+</body>
+</html>
