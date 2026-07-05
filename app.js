@@ -1,48 +1,29 @@
 "use strict";
 
-const APP_VERSION = "1.0.0";
+const APP_VERSION = "2.0.0";
 
 /* ================= tunable constants ================= */
 const COUNT_OPTIONS = [5, 10, 15, 20];
-const QUESTION_SECONDS = 15;   // when the timer is on (read mode is never timed)
 const WEAK_BIAS = 0.4;         // chance a question is drawn from saved weak items
-const TATWEEL = "ـ";
+
+// per-question time when the timer is on (read mode is never timed)
+function timeForQ(q) { return q.level === "sent" ? 30 : 15; }
 
 /* ================= content data ================= */
-// group: letters that look alike (used to pick tricky distractors); join: connects to the next letter
+// group: letters that look alike (used to pick tricky distractors)
 const LETTERS = [
-  { c: "ا", name: "ألف", group: 0, join: false },
-  { c: "ب", name: "باء", group: 1, join: true },
-  { c: "ت", name: "تاء", group: 1, join: true },
-  { c: "ث", name: "ثاء", group: 1, join: true },
-  { c: "ج", name: "جيم", group: 2, join: true },
-  { c: "ح", name: "حاء", group: 2, join: true },
-  { c: "خ", name: "خاء", group: 2, join: true },
-  { c: "د", name: "دال", group: 3, join: false },
-  { c: "ذ", name: "ذال", group: 3, join: false },
-  { c: "ر", name: "راء", group: 4, join: false },
-  { c: "ز", name: "زاي", group: 4, join: false },
-  { c: "س", name: "سين", group: 5, join: true },
-  { c: "ش", name: "شين", group: 5, join: true },
-  { c: "ص", name: "صاد", group: 6, join: true },
-  { c: "ض", name: "ضاد", group: 6, join: true },
-  { c: "ط", name: "طاء", group: 7, join: true },
-  { c: "ظ", name: "ظاء", group: 7, join: true },
-  { c: "ع", name: "عين", group: 8, join: true },
-  { c: "غ", name: "غين", group: 8, join: true },
-  { c: "ف", name: "فاء", group: 9, join: true },
-  { c: "ق", name: "قاف", group: 9, join: true },
-  { c: "ك", name: "كاف", group: 0, join: true },
-  { c: "ل", name: "لام", group: 0, join: true },
-  { c: "م", name: "ميم", group: 0, join: true },
-  { c: "ن", name: "نون", group: 1, join: true },
-  { c: "ه", name: "هاء", group: 0, join: true },
-  { c: "و", name: "واو", group: 0, join: false },
-  { c: "ي", name: "ياء", group: 1, join: true },
+  { c: "ا", group: 0 }, { c: "ب", group: 1 }, { c: "ت", group: 1 }, { c: "ث", group: 1 },
+  { c: "ج", group: 2 }, { c: "ح", group: 2 }, { c: "خ", group: 2 },
+  { c: "د", group: 3 }, { c: "ذ", group: 3 }, { c: "ر", group: 4 }, { c: "ز", group: 4 },
+  { c: "س", group: 5 }, { c: "ش", group: 5 }, { c: "ص", group: 6 }, { c: "ض", group: 6 },
+  { c: "ط", group: 7 }, { c: "ظ", group: 7 }, { c: "ع", group: 8 }, { c: "غ", group: 8 },
+  { c: "ف", group: 9 }, { c: "ق", group: 9 }, { c: "ك", group: 0 }, { c: "ل", group: 0 },
+  { c: "م", group: 0 }, { c: "ن", group: 1 }, { c: "ه", group: 0 }, { c: "و", group: 0 },
+  { c: "ي", group: 1 },
 ];
 const ALL_LETTER_CHARS = LETTERS.map(L => L.c);
 
-// w: vocalized word, b: bare letters (tiles / filtering), e: emoji picture
+// w: vocalized word, b: bare letters (tiles / first-letter games), e: emoji picture
 const WORDS = [
   { w: "قِطّ", b: "قط", e: "🐱" },
   { w: "بَيْت", b: "بيت", e: "🏠" },
@@ -104,41 +85,55 @@ const WORDS = [
   { w: "أُذُن", b: "اذن", e: "👂" },
   { w: "أَنْف", b: "انف", e: "👃" },
   { w: "فَم", b: "فم", e: "👄" },
+  { w: "ذِئْب", b: "ذئب", e: "🐺" },
+  { w: "رِيشَة", b: "ريشة", e: "🪶" },
 ];
 
-// harakat: short vowels and long (madd) variants — value appended to a letter char
-const MARKS = {
-  a: "َ", u: "ُ", i: "ِ",          // بَ بُ بِ
-  A: "َا", U: "ُو", I: "ِي",       // با بو بي
-};
-const POS_AR = ["في البداية", "في الوسط", "في النهاية"];
+// simple vocalized sentences (3–5 words) with an emoji hint
+const SENTENCES = [
+  { t: ["القِطُّ", "يَشْرَبُ", "الحَلِيبَ"], e: "🐱🥛" },
+  { t: ["الشَّمْسُ", "فِي", "السَّمَاءِ"], e: "☀️" },
+  { t: ["السَّمَكَةُ", "فِي", "المَاءِ"], e: "🐟💧" },
+  { t: ["الوَلَدُ", "يَقْرَأُ", "الكِتَابَ"], e: "👦📖" },
+  { t: ["البِنْتُ", "تَشْرَبُ", "الحَلِيبَ"], e: "👧🥛" },
+  { t: ["الوَلَدُ", "يَلْعَبُ", "بِالكُرَةِ"], e: "👦⚽" },
+  { t: ["الطَّائِرُ", "فَوْقَ", "الشَّجَرَةِ"], e: "🐦🌳" },
+  { t: ["القَمَرُ", "يَظْهَرُ", "فِي", "اللَّيْلِ"], e: "🌙" },
+  { t: ["أَنَا", "أُحِبُّ", "أُمِّي"], e: "❤️" },
+  { t: ["الفِيلُ", "حَيَوَانٌ", "كَبِيرٌ"], e: "🐘" },
+  { t: ["الأَسَدُ", "مَلِكُ", "الغَابَةِ"], e: "🦁" },
+  { t: ["البَيْتُ", "جَمِيلٌ", "وَنَظِيفٌ"], e: "🏠✨" },
+  { t: ["أَكَلَ", "الوَلَدُ", "التُّفَّاحَةَ"], e: "👦🍎" },
+  { t: ["رَكِبَ", "الأَبُ", "السَّيَّارَةَ"], e: "👨🚗" },
+  { t: ["النَّحْلَةُ", "تَصْنَعُ", "العَسَلَ"], e: "🐝🍯" },
+  { t: ["المَطَرُ", "يَنْزِلُ", "مِنَ", "السَّمَاءِ"], e: "🌧️" },
+  { t: ["الكَلْبُ", "يَحْرُسُ", "البَيْتَ"], e: "🐕🏠" },
+  { t: ["القِطَارُ", "سَرِيعٌ", "جِدًّا"], e: "🚂" },
+  { t: ["أَشْرَبُ", "المَاءَ", "البَارِدَ"], e: "💧" },
+  { t: ["الفَرَاشَةُ", "فَوْقَ", "الوَرْدَةِ"], e: "🦋🌹" },
+];
 
-function formOf(c, pos) { // 0 initial, 1 medial, 2 final (joining letters only)
-  return pos === 0 ? c + TATWEEL : pos === 1 ? TATWEEL + c + TATWEEL : TATWEEL + c;
-}
-function syllable(c, hk) { return c + MARKS[hk]; }
+const FIRST_LETTERS = new Set(WORDS.map(w => w.b[0]));
 
 /* ================= i18n (UI only; question content is always Arabic) ================= */
 const STRINGS = {
   ar: {
     title: "نجوم القراءة ⭐",
-    level: "المستوى", lvl1: "الحروف", lvl2: "أشكال الحروف", lvl3: "المقاطع", lvl4: "الكلمات",
+    level: "المستوى", lvlLetters: "الحروف", lvlWords: "الكلمات", lvlSent: "الجمل",
     mode: "اللعبة",
-    modeHear: "اسمع واختر", modePic: "الكلمة والصورة", modeBuild: "ركّب الكلمة", modeRead: "اقرأ لي",
+    modeMatch: "الصورة والحرف", modeBuild: "رتّب", modeRead: "اقرأ لي",
     letters: "الحروف المختارة", all: "الكل",
-    harakat: "الحركات",
     count: "كم عدد الأسئلة؟",
     timer: "المؤقت", timerOn: "⏱️ يعمل", timerOff: "🚫 بدون",
     start: "!ابدأ 🚀",
     hintLetters: "اختر حرفًا واحدًا على الأقل",
-    hintHarakat: "اختر حركة واحدة على الأقل",
-    insHear: "👂 اسمع ثم اختر",
-    insForm: "أين شكل الحرف؟",
+    insPickLetter: "بأي حرف تبدأ الصورة؟",
+    insPickPic: "اختر الصورة التي تبدأ بهذا الحرف",
     insPic: "اختر الصورة الصحيحة",
     insPicWord: "اختر الكلمة الصحيحة",
     insBuild: "ركّب الكلمة",
+    insSent: "رتّب الجملة",
     insRead: "🎤 اقرأ بصوت عالٍ",
-    pos: POS_AR,
     timeUp: "انتهى الوقت! ⏰",
     answerIs: "الصحيح",
     good: ["أحسنت! 🎉", "رائع! ⭐", "ممتاز! 💪", "عظيم! 🌟", "مذهل! 🚀"],
@@ -151,27 +146,24 @@ const STRINGS = {
     cheer2: "!عمل رائع! واصل التدريب",
     cheer1: "!محاولة جيدة! ستتحسن",
     cheer0: "!واصل التدريب، أنت تستطيع",
-    noVoice: "لا يوجد صوت عربي — فعِّله من إعدادات الجهاز",
   },
   en: {
     title: "Reading Stars ⭐",
-    level: "Level", lvl1: "Letters", lvl2: "Letter shapes", lvl3: "Syllables", lvl4: "Words",
+    level: "Level", lvlLetters: "Letters", lvlWords: "Words", lvlSent: "Sentences",
     mode: "Game",
-    modeHear: "Hear & tap", modePic: "Word & picture", modeBuild: "Build the word", modeRead: "Read to me",
+    modeMatch: "Picture & letter", modeBuild: "Arrange", modeRead: "Read to me",
     letters: "Letters to practice", all: "All",
-    harakat: "Vowel marks",
     count: "How many questions?",
     timer: "Timer", timerOn: "⏱️ On", timerOff: "🚫 Off",
     start: "Start! 🚀",
     hintLetters: "Pick at least one letter",
-    hintHarakat: "Pick at least one vowel mark",
-    insHear: "👂 Listen, then tap",
-    insForm: "Where is this letter's shape?",
+    insPickLetter: "Which letter does the picture start with?",
+    insPickPic: "Tap the picture that starts with this letter",
     insPic: "Tap the right picture",
     insPicWord: "Tap the right word",
     insBuild: "Build the word",
+    insSent: "Arrange the sentence",
     insRead: "🎤 Read out loud",
-    pos: ["at the start", "in the middle", "at the end"],
     timeUp: "Time's up! ⏰",
     answerIs: "The answer is",
     good: ["Great job! 🎉", "Awesome! ⭐", "You rock! 💪", "Super! 🌟", "Amazing! 🚀"],
@@ -184,27 +176,24 @@ const STRINGS = {
     cheer2: "Great work! Keep practicing!",
     cheer1: "Good try! You'll get better!",
     cheer0: "Keep practicing, you can do it!",
-    noVoice: "No Arabic voice found — enable it in device settings",
   },
   de: {
     title: "Lese-Sterne ⭐",
-    level: "Stufe", lvl1: "Buchstaben", lvl2: "Buchstabenformen", lvl3: "Silben", lvl4: "Wörter",
+    level: "Stufe", lvlLetters: "Buchstaben", lvlWords: "Wörter", lvlSent: "Sätze",
     mode: "Spiel",
-    modeHear: "Hören & tippen", modePic: "Wort & Bild", modeBuild: "Wort bauen", modeRead: "Lies mir vor",
+    modeMatch: "Bild & Buchstabe", modeBuild: "Ordnen", modeRead: "Lies mir vor",
     letters: "Buchstaben zum Üben", all: "Alle",
-    harakat: "Vokalzeichen",
     count: "Wie viele Aufgaben?",
     timer: "Zeitlimit", timerOn: "⏱️ An", timerOff: "🚫 Aus",
     start: "Los! 🚀",
     hintLetters: "Wähle mindestens einen Buchstaben",
-    hintHarakat: "Wähle mindestens ein Vokalzeichen",
-    insHear: "👂 Hör zu, dann tippe",
-    insForm: "Wo ist diese Buchstabenform?",
+    insPickLetter: "Mit welchem Buchstaben beginnt das Bild?",
+    insPickPic: "Tippe auf das Bild, das mit diesem Buchstaben beginnt",
     insPic: "Tippe auf das richtige Bild",
     insPicWord: "Tippe auf das richtige Wort",
     insBuild: "Baue das Wort",
+    insSent: "Ordne den Satz",
     insRead: "🎤 Lies laut vor",
-    pos: ["am Anfang", "in der Mitte", "am Ende"],
     timeUp: "Zeit ist um! ⏰",
     answerIs: "Richtig ist",
     good: ["Super! 🎉", "Toll! ⭐", "Klasse! 💪", "Spitze! 🌟", "Fantastisch! 🚀"],
@@ -217,23 +206,21 @@ const STRINGS = {
     cheer2: "Super gemacht! Weiter so!",
     cheer1: "Guter Versuch! Übung macht den Meister!",
     cheer0: "Weiter üben, du schaffst das!",
-    noVoice: "Keine arabische Stimme gefunden — in den Geräteeinstellungen aktivieren",
   },
 };
 
 /* ================= settings ================= */
 const DEFAULTS = {
-  lang: "ar", level: 1, mode: "hear",
-  letters: [...ALL_LETTER_CHARS], harakat: ["a", "u", "i"],
+  lang: "ar", level: "letters", mode: "match",
+  letters: [...ALL_LETTER_CHARS],
   count: 10, timed: false, sound: true,
 };
 let settings = loadSettings();
 
 function validModes(level) {
-  if (level === 1) return ["hear", "read"];
-  if (level === 2) return ["hear"];
-  if (level === 3) return ["hear", "read"];
-  return ["hear", "pic", "build", "read"];
+  if (level === "letters") return ["match", "read"];
+  if (level === "words") return ["match", "build", "read"];
+  return ["build", "read"]; // sentences
 }
 
 function loadSettings() {
@@ -241,14 +228,12 @@ function loadSettings() {
     const s = JSON.parse(localStorage.getItem("readstars-settings"));
     if (!s) return { ...DEFAULTS };
     const letters = Array.isArray(s.letters) ? s.letters.filter(c => ALL_LETTER_CHARS.includes(c)) : [];
-    const harakat = Array.isArray(s.harakat) ? s.harakat.filter(h => Object.keys(MARKS).includes(h)) : [];
-    const level = [1, 2, 3, 4].includes(s.level) ? s.level : DEFAULTS.level;
+    const level = ["letters", "words", "sent"].includes(s.level) ? s.level : DEFAULTS.level;
     return {
       lang: ["ar", "en", "de"].includes(s.lang) ? s.lang : DEFAULTS.lang,
       level,
-      mode: validModes(level).includes(s.mode) ? s.mode : "hear",
+      mode: validModes(level).includes(s.mode) ? s.mode : validModes(level)[0],
       letters: letters.length ? letters : [...DEFAULTS.letters],
-      harakat: harakat.length ? harakat : [...DEFAULTS.harakat],
       count: COUNT_OPTIONS.includes(s.count) ? s.count : DEFAULTS.count,
       timed: s.timed === true,
       sound: s.sound !== false,
@@ -260,7 +245,7 @@ function saveSettings() {
 }
 
 /* ================= weak items & high scores ================= */
-// keys: "L:ب" (letter), "S:بَ" (syllable), "W:قط" (word by bare letters)
+// keys: "L:ب" (letter), "W:قط" (word by bare letters), "T:3" (sentence index)
 function loadWeak() {
   try { return JSON.parse(localStorage.getItem("readstars-weak")) || {}; } catch { return {}; }
 }
@@ -277,16 +262,15 @@ function recordResult(key, correct) {
     saveWeak(w);
   }
 }
-// weighted lists of weak targets usable with the current settings
 function weakTargets(cfg) {
   const w = loadWeak();
-  const out = { L: [], S: [], W: [] };
+  const out = { L: [], W: [], T: [] };
   for (const key of Object.keys(w)) {
     const kind = key[0], val = key.slice(2);
     let ok = false;
-    if (kind === "L") ok = cfg.letters.includes(val);
-    else if (kind === "S") ok = cfg.letters.includes(val[0]) && cfg.syllables.includes(val);
-    else if (kind === "W") ok = cfg.words.some(x => x.b === val);
+    if (kind === "L") ok = cfg.letterPool.includes(val);
+    else if (kind === "W") ok = WORDS.some(x => x.b === val);
+    else if (kind === "T") ok = +val >= 0 && +val < SENTENCES.length;
     if (ok) for (let i = 0; i < w[key]; i++) out[kind].push(val);
   }
   return out;
@@ -310,7 +294,6 @@ function shuffle(arr) {
   }
   return a;
 }
-// up to n distinct labels from candidates (kept in order), skipping taken ones
 function takeDistinct(taken, candidates, n) {
   const out = [];
   for (const c of candidates) {
@@ -320,30 +303,6 @@ function takeDistinct(taken, candidates, n) {
   return out;
 }
 const letterByChar = c => LETTERS.find(L => L.c === c);
-
-/* ================= speech (built-in Arabic voice) ================= */
-let arVoice = null;
-function pickVoice() {
-  try {
-    const vs = speechSynthesis.getVoices();
-    arVoice = vs.find(v => /^ar([-_]|$)/i.test(v.lang)) || null;
-  } catch {}
-}
-if ("speechSynthesis" in window) {
-  pickVoice();
-  speechSynthesis.onvoiceschanged = pickVoice;
-}
-function speak(text) {
-  if (!settings.sound || !text || !("speechSynthesis" in window)) return;
-  try {
-    speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = arVoice ? arVoice.lang : "ar-SA";
-    if (arVoice) u.voice = arVoice;
-    u.rate = 0.8;
-    speechSynthesis.speak(u);
-  } catch {}
-}
 
 /* ================= sounds (tiny WebAudio blips) ================= */
 let audioCtx = null;
@@ -368,18 +327,13 @@ const soundTick = () => beep([1250], 0.05, 0.07);
 
 /* ================= question generation ================= */
 function buildCfg() {
-  const letters = [...settings.letters];
+  // in the letters level, only letters that start at least one word are usable
+  const withWords = settings.letters.filter(c => FIRST_LETTERS.has(c));
   const cfg = {
     level: settings.level,
     mode: settings.mode,
-    letters,
-    harakat: [...settings.harakat],
-    timed: settings.timed,
+    letterPool: withWords.length ? withWords : [...FIRST_LETTERS],
   };
-  cfg.syllables = [];
-  for (const c of letters) for (const h of cfg.harakat) cfg.syllables.push(syllable(c, h));
-  const filtered = WORDS.filter(x => [...x.b].some(c => letters.includes(c)));
-  cfg.words = filtered.length ? filtered : [...WORDS];
   cfg.weak = weakTargets(cfg);
   return cfg;
 }
@@ -395,34 +349,33 @@ function genQuestion(cfg, recent) {
   }
 }
 
-function pickLetter(cfg) {
-  if (cfg.weak.L.length && Math.random() < WEAK_BIAS) return letterByChar(pick(cfg.weak.L));
-  return letterByChar(pick(cfg.letters));
+function pickLetterChar(cfg) {
+  if (cfg.weak.L.length && Math.random() < WEAK_BIAS) return pick(cfg.weak.L);
+  return pick(cfg.letterPool);
 }
-function pickSyll(cfg) {
-  if (cfg.weak.S.length && Math.random() < WEAK_BIAS) return pick(cfg.weak.S);
-  return pick(cfg.syllables);
-}
-function pickWord(cfg) {
+function pickWord(cfg, pool) {
+  const p = pool || WORDS;
   if (cfg.weak.W.length && Math.random() < WEAK_BIAS) {
     const b = pick(cfg.weak.W);
-    const w = cfg.words.find(x => x.b === b);
+    const w = p.find(x => x.b === b);
     if (w) return w;
   }
-  return pick(cfg.words);
+  return pick(p);
+}
+function pickSentenceIdx(cfg) {
+  if (cfg.weak.T.length && Math.random() < WEAK_BIAS) return +pick(cfg.weak.T);
+  return Math.floor(Math.random() * SENTENCES.length);
 }
 
 function makeQ(cfg) {
   const m = cfg.mode, lv = cfg.level;
-  if (m === "hear") {
-    if (lv === 1) return qLetterHear(cfg);
-    if (lv === 2) return qFormMatch(cfg);
-    if (lv === 3) return qSyllHear(cfg);
-    return qWordHear(cfg);
+  if (lv === "letters") return m === "read" ? qReadLetter(cfg) : qLetterMatch(cfg);
+  if (lv === "words") {
+    if (m === "match") return qPic(cfg);
+    if (m === "build") return qBuild(cfg);
+    return qReadWord(cfg);
   }
-  if (m === "pic") return qPic(cfg);
-  if (m === "build") return qBuild(cfg);
-  return qRead(cfg);
+  return m === "build" ? qSentBuild(cfg) : qReadSent(cfg);
 }
 
 function makeCards(correct, distractors, n) {
@@ -431,59 +384,45 @@ function makeCards(correct, distractors, n) {
   return shuffle(labels.map(t => ({ t, ok: t === correct })));
 }
 
-function qLetterHear(cfg) {
-  const L = pickLetter(cfg);
-  const sameGroup = LETTERS.filter(x => x.group === L.group && x.c !== L.c).map(x => x.c);
-  const others = shuffle(ALL_LETTER_CHARS.filter(c => c !== L.c && !sameGroup.includes(c)));
+/* --- letters level: picture ↔ first letter, both directions --- */
+function qLetterMatch(cfg) {
+  const c = pickLetterChar(cfg);
+  const word = pick(WORDS.filter(x => x.b[0] === c));
+  if (Math.random() < 0.5) {
+    // show the picture → pick the letter it starts with (6 letter cards)
+    const L = letterByChar(c);
+    const sameGroup = LETTERS.filter(x => x.group === L.group && x.c !== c).map(x => x.c);
+    const others = shuffle(ALL_LETTER_CHARS.filter(x => x !== c && !sameGroup.includes(x)));
+    return {
+      mode: "match", level: "letters", key: "L:" + c + ":pic", weakKey: "L:" + c,
+      insKey: "insPickLetter",
+      promptEmoji: word.e,
+      cards: makeCards(c, [...shuffle(sameGroup), ...others], 6),
+      answerText: c, reveal: word.w,
+    };
+  }
+  // show the letter → pick the picture that starts with it (4 emoji cards)
+  const ds = shuffle(WORDS.filter(x => x.b[0] !== c && x.e !== word.e)).map(x => x.e);
   return {
-    mode: "hear", level: 1, key: "L:" + L.c, weakKey: "L:" + L.c,
-    say: L.name, sayFirst: true,
-    cards: makeCards(L.c, [...shuffle(sameGroup), ...others], 6),
-    answerText: L.c,
+    mode: "match", level: "letters", key: "L:" + c + ":ltr", weakKey: "L:" + c,
+    insKey: "insPickPic", emojiCards: true,
+    prompt: c,
+    cards: makeCards(word.e, ds, 4),
+    answerText: word.e, reveal: word.w,
   };
 }
 
-function qFormMatch(cfg) {
-  const joiningSel = cfg.letters.filter(c => letterByChar(c).join);
-  const poolChars = joiningSel.length ? joiningSel : LETTERS.filter(L => L.join).map(L => L.c);
-  let c;
-  if (cfg.weak.L.length && Math.random() < WEAK_BIAS) {
-    const weakJoin = cfg.weak.L.filter(x => letterByChar(x).join);
-    c = weakJoin.length ? pick(weakJoin) : pick(poolChars);
-  } else c = pick(poolChars);
-  const L = letterByChar(c);
-  const p = Math.floor(Math.random() * 3);
-  const otherForms = [0, 1, 2].filter(x => x !== p).map(x => formOf(c, x));
-  const groupForms = LETTERS
-    .filter(x => x.join && x.c !== c && x.group === L.group)
-    .map(x => formOf(x.c, p));
-  const randForms = shuffle(LETTERS.filter(x => x.join && x.c !== c)).map(x => formOf(x.c, p));
+function qReadLetter(cfg) {
+  const c = pickLetterChar(cfg);
+  const ex = pick(WORDS.filter(x => x.b[0] === c));
   return {
-    mode: "hear", level: 2, key: `F:${c}:${p}`, weakKey: "L:" + c,
-    say: `${L.name}، ${POS_AR[p]}`,
-    prompt: c, posIdx: p,
-    cards: makeCards(formOf(c, p), [...otherForms, ...shuffle(groupForms), ...randForms], 6),
-    answerText: formOf(c, p),
+    mode: "read", level: "letters", key: "L:" + c, weakKey: "L:" + c,
+    insKey: "insRead", prompt: c,
+    answerText: c, reveal: `${ex.w} ${ex.e}`,
   };
 }
 
-function qSyllHear(cfg) {
-  const s = pickSyll(cfg);
-  const c = s[0];
-  const L = letterByChar(c);
-  // distractors: same letter with other marks, then look-alike letters with the same mark
-  const sameLetter = cfg.syllables.filter(x => x[0] === c && x !== s);
-  const mark = s.slice(1);
-  const similar = LETTERS.filter(x => x.c !== c && x.group === L.group).map(x => x.c + mark);
-  const rest = shuffle(LETTERS.filter(x => x.c !== c && x.group !== L.group)).map(x => x.c + mark);
-  return {
-    mode: "hear", level: 3, key: "S:" + s, weakKey: "S:" + s,
-    say: s, sayFirst: true,
-    cards: makeCards(s, [...shuffle(sameLetter), ...shuffle(similar), ...rest], 6),
-    answerText: s,
-  };
-}
-
+/* --- words level --- */
 function wordDistractors(w, words) {
   const rest = words.filter(x => x.b !== w.b && x.e !== w.e && x.w !== w.w);
   const scored = rest.map(x => ({
@@ -494,25 +433,14 @@ function wordDistractors(w, words) {
   return scored.map(o => o.x);
 }
 
-function qWordHear(cfg) {
-  const w = pickWord(cfg);
-  const ds = wordDistractors(w, cfg.words).map(x => x.w);
-  return {
-    mode: "hear", level: 4, key: "W:" + w.b, weakKey: "W:" + w.b,
-    say: w.w, sayFirst: true,
-    cards: makeCards(w.w, ds, 4),
-    answerText: w.w, reveal: w.e,
-  };
-}
-
 function qPic(cfg) {
   const w = pickWord(cfg);
-  const ds = wordDistractors(w, cfg.words);
-  const toEmoji = Math.random() < 0.5; // word shown → pick emoji, or emoji shown → pick word
+  const ds = wordDistractors(w, WORDS);
+  const toEmoji = Math.random() < 0.5;
   return {
-    mode: "pic", level: 4, key: "W:" + w.b, weakKey: "W:" + w.b,
-    say: w.w, sayFirst: toEmoji,
-    toEmoji,
+    mode: "match", level: "words", key: "W:" + w.b, weakKey: "W:" + w.b,
+    insKey: toEmoji ? "insPic" : "insPicWord",
+    emojiCards: toEmoji,
     prompt: toEmoji ? w.w : "", promptEmoji: toEmoji ? "" : w.e,
     cards: toEmoji
       ? makeCards(w.e, ds.map(x => x.e), 4)
@@ -522,33 +450,49 @@ function qPic(cfg) {
 }
 
 function qBuild(cfg) {
-  const pool = cfg.words.filter(x => x.b.length >= 2 && x.b.length <= 5);
-  let w;
-  if (cfg.weak.W.length && Math.random() < WEAK_BIAS) {
-    const b = pick(cfg.weak.W);
-    w = pool.find(x => x.b === b) || pick(pool);
-  } else w = pick(pool);
+  const pool = WORDS.filter(x => x.b.length >= 2 && x.b.length <= 5);
+  const w = pickWord(cfg, pool);
   let tiles = shuffle([...w.b]);
   for (let i = 0; i < 10 && tiles.join("") === w.b && w.b.length > 1; i++) tiles = shuffle([...w.b]);
   return {
-    mode: "build", level: 4, key: "W:" + w.b, weakKey: "W:" + w.b,
-    say: w.w, sayFirst: true,
-    promptEmoji: w.e, word: w, tiles,
+    mode: "build", level: "words", key: "W:" + w.b, weakKey: "W:" + w.b,
+    insKey: "insBuild",
+    promptEmoji: w.e, tiles, target: w.b, targetShow: w.w, joiner: "",
     answerText: w.w,
   };
 }
 
-function qRead(cfg) {
-  if (cfg.level === 1) {
-    const L = pickLetter(cfg);
-    return { mode: "read", level: 1, key: "L:" + L.c, weakKey: "L:" + L.c, prompt: L.c, say: L.name, answerText: L.c };
-  }
-  if (cfg.level === 3) {
-    const s = pickSyll(cfg);
-    return { mode: "read", level: 3, key: "S:" + s, weakKey: "S:" + s, prompt: s, say: s, answerText: s };
-  }
+function qReadWord(cfg) {
   const w = pickWord(cfg);
-  return { mode: "read", level: 4, key: "W:" + w.b, weakKey: "W:" + w.b, prompt: w.w, say: w.w, answerText: w.w, reveal: w.e };
+  return {
+    mode: "read", level: "words", key: "W:" + w.b, weakKey: "W:" + w.b,
+    insKey: "insRead", prompt: w.w,
+    answerText: w.w, reveal: w.e,
+  };
+}
+
+/* --- sentences level --- */
+function qSentBuild(cfg) {
+  const idx = pickSentenceIdx(cfg);
+  const s = SENTENCES[idx];
+  let tiles = shuffle([...s.t]);
+  for (let i = 0; i < 10 && tiles.join(" ") === s.t.join(" "); i++) tiles = shuffle([...s.t]);
+  return {
+    mode: "build", level: "sent", key: "T:" + idx, weakKey: "T:" + idx,
+    insKey: "insSent",
+    promptEmoji: s.e, tiles, target: s.t.join(" "), targetShow: s.t.join(" "), joiner: " ",
+    answerText: s.t.join(" "), sent: true,
+  };
+}
+
+function qReadSent(cfg) {
+  const idx = pickSentenceIdx(cfg);
+  const s = SENTENCES[idx];
+  return {
+    mode: "read", level: "sent", key: "T:" + idx, weakKey: "T:" + idx,
+    insKey: "insRead", prompt: s.t.join(" "),
+    answerText: s.t.join(" "), reveal: s.e, sent: true,
+  };
 }
 
 /* ================= setup screen ================= */
@@ -581,21 +525,13 @@ function buildSetup() {
   }
   document.querySelectorAll("#level-row .op-chip").forEach(chip => {
     chip.onclick = () => {
-      settings.level = +chip.dataset.level;
-      if (!validModes(settings.level).includes(settings.mode)) settings.mode = "hear";
+      settings.level = chip.dataset.level;
+      if (!validModes(settings.level).includes(settings.mode)) settings.mode = validModes(settings.level)[0];
       refreshSetup();
     };
   });
   document.querySelectorAll("#mode-row .op-chip").forEach(chip => {
     chip.onclick = () => { settings.mode = chip.dataset.mode; refreshSetup(); };
-  });
-  document.querySelectorAll("#harakat-row .hk").forEach(chip => {
-    chip.onclick = () => {
-      const h = chip.dataset.hk;
-      const i = settings.harakat.indexOf(h);
-      i >= 0 ? settings.harakat.splice(i, 1) : settings.harakat.push(h);
-      refreshSetup();
-    };
   });
   document.querySelectorAll("#timer-row .chip").forEach(chip => {
     chip.onclick = () => { settings.timed = chip.dataset.timed === "1"; refreshSetup(); };
@@ -610,23 +546,21 @@ function buildSetup() {
 function refreshSetup() {
   const lv = settings.level;
   const modes = validModes(lv);
-  document.querySelectorAll("#level-row .op-chip").forEach(c => c.classList.toggle("selected", +c.dataset.level === lv));
+  document.querySelectorAll("#level-row .op-chip").forEach(c => c.classList.toggle("selected", c.dataset.level === lv));
   document.querySelectorAll("#mode-row .op-chip").forEach(c => {
     c.hidden = !modes.includes(c.dataset.mode);
     c.classList.toggle("selected", c.dataset.mode === settings.mode);
   });
+  $("letters-group").hidden = lv !== "letters";
   document.querySelectorAll("#letters-row .chip").forEach(c => c.classList.toggle("selected", settings.letters.includes(c.dataset.letter)));
   $("btn-all").classList.toggle("selected", settings.letters.length === ALL_LETTER_CHARS.length);
-  $("harakat-group").hidden = lv !== 3;
-  document.querySelectorAll("#harakat-row .hk").forEach(c => c.classList.toggle("selected", settings.harakat.includes(c.dataset.hk)));
   document.querySelectorAll("#count-row .chip").forEach(c => c.classList.toggle("selected", +c.dataset.count === settings.count));
   $("timer-group").hidden = settings.mode === "read";
   document.querySelectorAll("#timer-row .chip").forEach(c => c.classList.toggle("selected", (c.dataset.timed === "1") === settings.timed));
   $("btn-sound").textContent = settings.sound ? "🔊" : "🔇";
 
   let hint = "";
-  if (settings.letters.length === 0) hint = T().hintLetters;
-  else if (lv === 3 && settings.harakat.length === 0) hint = T().hintHarakat;
+  if (lv === "letters" && settings.letters.length === 0) hint = T().hintLetters;
   $("setup-hint").textContent = hint;
   $("btn-start").disabled = !!hint;
   saveSettings();
@@ -641,7 +575,6 @@ function applyLang() {
   $("t-mode").textContent = t.mode;
   $("t-letters").textContent = t.letters;
   $("btn-all").textContent = t.all;
-  $("t-harakat").textContent = t.harakat;
   $("t-count").textContent = t.count;
   $("t-timer").textContent = t.timer;
   $("btn-start").textContent = t.start;
@@ -681,25 +614,18 @@ function nextQuestion() {
   quiz.built = [];
   const t = T();
 
-  let ins = "";
-  if (q.mode === "hear") ins = q.level === 2 ? t.insForm : t.insHear;
-  else if (q.mode === "pic") ins = q.toEmoji ? t.insPic : t.insPicWord;
-  else if (q.mode === "build") ins = t.insBuild;
-  else ins = t.insRead;
-  $("instruction").textContent = ins;
+  $("instruction").textContent = t[q.insKey] || "";
 
   const promptEl = $("prompt");
-  let ptext = q.prompt || "";
-  if (q.level === 2 && q.posIdx != null && q.mode === "hear") ptext = `${q.prompt} ← ${t.pos[q.posIdx]}`;
-  promptEl.textContent = q.promptEmoji || ptext;
+  promptEl.textContent = q.promptEmoji || q.prompt || "";
   promptEl.classList.toggle("emoji", !!q.promptEmoji);
-  promptEl.classList.toggle("read-big", q.mode === "read");
-  $("btn-say").hidden = !q.say;
+  promptEl.classList.toggle("read-big", q.mode === "read" && !q.sent);
+  promptEl.classList.toggle("sent", !!q.sent && q.mode === "read");
 
   const builtEl = $("built");
   builtEl.hidden = q.mode !== "build";
   builtEl.textContent = "";
-  builtEl.className = "built";
+  builtEl.className = "built" + (q.sent ? " sent-built" : "");
 
   $("feedback").textContent = "";
   $("feedback").className = "feedback";
@@ -709,7 +635,7 @@ function nextQuestion() {
   cardsEl.hidden = !q.cards;
   if (q.cards) {
     cardsEl.classList.toggle("grid3", q.cards.length > 4);
-    cardsEl.classList.toggle("emoji-cards", q.mode === "pic" && q.toEmoji);
+    cardsEl.classList.toggle("emoji-cards", !!q.emojiCards);
     for (const c of q.cards) {
       const b = document.createElement("button");
       b.type = "button"; b.className = "acard"; b.textContent = c.t; b.dir = "rtl";
@@ -730,10 +656,8 @@ function nextQuestion() {
     quiz.timerStart = performance.now();
     quiz.timerTotal = Infinity;
   } else {
-    startTimer(QUESTION_SECONDS);
+    startTimer(timeForQ(q));
   }
-
-  if (q.sayFirst) setTimeout(() => speak(q.say), 250);
 }
 
 function buildTiles(q) {
@@ -741,7 +665,7 @@ function buildTiles(q) {
   tilesEl.innerHTML = "";
   q.tiles.forEach((ch, i) => {
     const b = document.createElement("button");
-    b.type = "button"; b.className = "tile"; b.textContent = ch;
+    b.type = "button"; b.className = "tile" + (q.sent ? " tile-word" : ""); b.textContent = ch;
     b.dataset.i = i;
     b.onclick = () => onTile(q, b, ch);
     tilesEl.appendChild(b);
@@ -753,7 +677,7 @@ function buildTiles(q) {
     const last = quiz.built.pop();
     const btn = document.querySelector(`#tiles .tile[data-i="${last.i}"]`);
     if (btn) btn.disabled = false;
-    $("built").textContent = quiz.built.map(x => x.ch).join("");
+    $("built").textContent = quiz.built.map(x => x.ch).join(q.joiner);
   };
   tilesEl.appendChild(back);
 }
@@ -762,10 +686,10 @@ function onTile(q, btn, ch) {
   if (quiz.locked || btn.disabled) return;
   btn.disabled = true;
   quiz.built.push({ ch, i: +btn.dataset.i });
-  const word = quiz.built.map(x => x.ch).join("");
-  $("built").textContent = word;
+  const text = quiz.built.map(x => x.ch).join(q.joiner);
+  $("built").textContent = text;
   if (quiz.built.length === q.tiles.length) {
-    finishAnswer(word === q.word.b, q, () => { $("built").textContent = q.word.w; });
+    finishAnswer(text === q.target, q, () => { $("built").textContent = q.targetShow; });
   }
 }
 
@@ -798,15 +722,14 @@ function finishAnswer(good, q, decorate) {
     $("built").classList.add("ok");
     $("score-pill").textContent = `⭐ ${Math.round(quiz.points)}`;
     soundGood();
-    setTimeout(advance, 1100);
+    setTimeout(advance, 1200);
   } else {
     quiz.missed.push(q);
     $("feedback").textContent = `${T().answerIs}: ${q.answerText} ${q.reveal || ""}`;
     $("feedback").className = "feedback bad";
     $("built").classList.add("no");
-    if (q.mode === "build") $("built").textContent = q.word.w;
+    if (q.mode === "build") $("built").textContent = q.targetShow;
     soundBad();
-    speak(q.say);
     setTimeout(advance, 2300);
   }
 }
@@ -821,9 +744,8 @@ function onTimeout() {
   document.querySelectorAll("#cards .acard").forEach(b => {
     if (b.textContent === q.answerText) b.classList.add("right");
   });
-  if (q.mode === "build") { $("built").textContent = q.word.w; $("built").classList.add("no"); }
+  if (q.mode === "build") { $("built").textContent = q.targetShow; $("built").classList.add("no"); }
   soundBad();
-  speak(q.say);
   setTimeout(advance, 2300);
 }
 
@@ -832,7 +754,6 @@ function onGrade(good) {
   const q = quiz.questions[quiz.index];
   finishAnswer(good, q, () => {
     if (q.reveal) $("prompt").textContent = `${q.prompt} ${q.reveal}`;
-    speak(q.say); // the kid hears the correct reading either way
   });
 }
 
@@ -897,9 +818,7 @@ function finishQuiz() {
   if (quiz.missed.length) {
     for (const q of quiz.missed) {
       const li = document.createElement("li");
-      li.textContent = `🔊 ${q.answerText} ${q.reveal || ""}`;
-      const say = q.say;
-      li.onclick = () => speak(say);
+      li.textContent = `${q.answerText} ${q.reveal || ""}`;
       list.appendChild(li);
     }
     missedWrap.hidden = false;
@@ -910,19 +829,9 @@ function finishQuiz() {
 }
 
 /* ================= wiring ================= */
-$("btn-say").onclick = () => {
-  if (!quiz) return;
-  const q = quiz.questions[quiz.index];
-  if (!arVoice) { pickVoice(); if (!arVoice && "speechSynthesis" in window) $("feedback").textContent = T().noVoice; }
-  speak(q.say);
-};
 $("btn-good").onclick = () => onGrade(true);
 $("btn-bad").onclick = () => onGrade(false);
-$("btn-quit").onclick = () => {
-  stopTimer(); quiz = null;
-  try { speechSynthesis.cancel(); } catch {}
-  showScreen("setup");
-};
+$("btn-quit").onclick = () => { stopTimer(); quiz = null; showScreen("setup"); };
 $("btn-again").onclick = startQuiz;
 $("btn-settings").onclick = () => showScreen("setup");
 

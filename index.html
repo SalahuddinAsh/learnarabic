@@ -32,19 +32,17 @@
       <div class="setup-group">
         <h2 id="t-level">المستوى</h2>
         <div class="chip-row" id="level-row">
-          <button class="chip op-chip" data-level="1" type="button"><span class="op-sym">أ</span><span class="op-name" data-t="lvl1">الحروف</span></button>
-          <button class="chip op-chip" data-level="2" type="button"><span class="op-sym">بـ</span><span class="op-name" data-t="lvl2">أشكال الحروف</span></button>
-          <button class="chip op-chip" data-level="3" type="button"><span class="op-sym">بَ</span><span class="op-name" data-t="lvl3">المقاطع</span></button>
-          <button class="chip op-chip" data-level="4" type="button"><span class="op-sym">🐱</span><span class="op-name" data-t="lvl4">الكلمات</span></button>
+          <button class="chip op-chip" data-level="letters" type="button"><span class="op-sym">أ ب</span><span class="op-name" data-t="lvlLetters">الحروف</span></button>
+          <button class="chip op-chip" data-level="words"   type="button"><span class="op-sym">🐱</span><span class="op-name" data-t="lvlWords">الكلمات</span></button>
+          <button class="chip op-chip" data-level="sent"    type="button"><span class="op-sym">📖</span><span class="op-name" data-t="lvlSent">الجمل</span></button>
         </div>
       </div>
 
       <div class="setup-group">
         <h2 id="t-mode">اللعبة</h2>
         <div class="chip-row" id="mode-row">
-          <button class="chip op-chip" data-mode="hear"  type="button"><span class="op-sym">👂</span><span class="op-name" data-t="modeHear">اسمع واختر</span></button>
-          <button class="chip op-chip" data-mode="pic"   type="button"><span class="op-sym">🖼️</span><span class="op-name" data-t="modePic">الكلمة والصورة</span></button>
-          <button class="chip op-chip" data-mode="build" type="button"><span class="op-sym">🧩</span><span class="op-name" data-t="modeBuild">ركّب الكلمة</span></button>
+          <button class="chip op-chip" data-mode="match" type="button"><span class="op-sym">🖼️</span><span class="op-name" data-t="modeMatch">الصورة والحرف</span></button>
+          <button class="chip op-chip" data-mode="build" type="button"><span class="op-sym">🧩</span><span class="op-name" data-t="modeBuild">رتّب</span></button>
           <button class="chip op-chip" data-mode="read"  type="button"><span class="op-sym">🎤</span><span class="op-name" data-t="modeRead">اقرأ لي</span></button>
         </div>
       </div>
@@ -53,18 +51,6 @@
         <h2 id="t-letters">الحروف المختارة</h2>
         <div class="chip-row letters" id="letters-row" dir="rtl"></div>
         <button class="chip all-chip" id="btn-all" type="button">الكل</button>
-      </div>
-
-      <div class="setup-group" id="harakat-group" hidden>
-        <h2 id="t-harakat">الحركات</h2>
-        <div class="chip-row" id="harakat-row" dir="rtl">
-          <button class="chip hk" data-hk="a" type="button" dir="rtl">بَ</button>
-          <button class="chip hk" data-hk="u" type="button" dir="rtl">بُ</button>
-          <button class="chip hk" data-hk="i" type="button" dir="rtl">بِ</button>
-          <button class="chip hk" data-hk="A" type="button" dir="rtl">با</button>
-          <button class="chip hk" data-hk="U" type="button" dir="rtl">بو</button>
-          <button class="chip hk" data-hk="I" type="button" dir="rtl">بي</button>
-        </div>
       </div>
 
       <div class="setup-group">
@@ -103,7 +89,6 @@
       <div class="question-area">
         <div class="instruction" id="instruction"></div>
         <div class="prompt-row">
-          <button id="btn-say" class="say-btn" type="button" hidden>🔊</button>
           <div class="prompt" id="prompt" dir="rtl"></div>
         </div>
         <div class="built" id="built" dir="rtl" hidden></div>
