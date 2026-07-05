@@ -1,6 +1,6 @@
 "use strict";
 
-const APP_VERSION = "2.3.0";
+const APP_VERSION = "2.4.0";
 
 /* ================= tunable constants ================= */
 const COUNT_OPTIONS = [5, 10, 15, 20];
@@ -1033,8 +1033,9 @@ function finishQuiz() {
 }
 
 /* ================= Falling Pictures (reward game) =================
-   Pictures parachute down; the kid taps the letter each picture's word
-   starts with. Weak letters spawn more often. */
+   The game matches the level being practiced:
+   - letters level: tap the letter each falling picture's word starts with
+   - words/sentences level: spell the falling picture's whole word */
 let game = null;
 
 function startGame() {
@@ -1043,14 +1044,22 @@ function startGame() {
   document.querySelectorAll("#sky .fall").forEach(el => el.remove());
   $("game-over").hidden = true;
   const cfg = buildCfg();
+  const kind = settings.level === "letters" ? "letters" : "word";
   game = {
-    pool: cfg.letterPool, weakL: cfg.weak.L,
-    score: 0, lives: 3, items: [],
-    speed: 22, spawnEvery: 3300, sinceSpawn: 2800,
+    kind,
+    pool: cfg.letterPool, weakL: cfg.weak.L, weakW: cfg.weak.W,
+    score: 0, lives: 3, items: [], entry: "",
+    speed: kind === "letters" ? 22 : 13,
+    spawnEvery: kind === "letters" ? 3300 : 1200,
+    maxItems: kind === "letters" ? 3 : 1,
+    sinceSpawn: 2800,
     over: false, prev: performance.now(), raf: null,
   };
+  $("game-entry").hidden = kind !== "word";
+  $("game-entry").textContent = " ";
+  $("game-letters").innerHTML = "";
   updateGameHud();
-  refreshLetterPanel();
+  if (kind === "letters") refreshLetterPanel();
   showScreen("game");
   game.raf = requestAnimationFrame(gameTick);
 }
@@ -1066,7 +1075,7 @@ function gameTick(now) {
   game.prev = now;
   const H = $("sky").clientHeight;
   game.sinceSpawn += dt * 1000;
-  if (game.sinceSpawn >= game.spawnEvery && game.items.length < 3) {
+  if (game.sinceSpawn >= game.spawnEvery && game.items.length < game.maxItems) {
     spawnItem();
     game.sinceSpawn = 0;
   }
@@ -1079,19 +1088,45 @@ function gameTick(now) {
 }
 
 function spawnItem() {
-  const useWeak = game.weakL.length && Math.random() < WEAK_BIAS;
-  const c = useWeak ? pick(game.weakL) : pick(game.pool);
-  const candidates = WORDS.filter(w => w.b[0] === c && !game.items.some(it => it.e === w.e));
-  if (!candidates.length) return;
-  const w = pick(candidates);
+  let w;
+  if (game.kind === "letters") {
+    const useWeak = game.weakL.length && Math.random() < WEAK_BIAS;
+    const c = useWeak ? pick(game.weakL) : pick(game.pool);
+    const candidates = WORDS.filter(x => x.b[0] === c && !game.items.some(it => it.e === x.e));
+    if (!candidates.length) return;
+    w = pick(candidates);
+  } else {
+    const pool = WORDS.filter(x => x.b.length <= 5);
+    if (game.weakW.length && Math.random() < WEAK_BIAS) {
+      w = pool.find(x => x.b === pick(game.weakW)) || pick(pool);
+    } else w = pick(pool);
+  }
   const el = document.createElement("div");
   el.className = "fall";
   el.innerHTML = `<span class="chute">🪂</span><span class="cargo">${w.e}</span>`;
   el.style.left = (8 + Math.random() * 70) + "%";
   el.style.top = "-90px";
   $("sky").appendChild(el);
-  game.items.push({ c, e: w.e, el, y: -90 });
-  refreshLetterPanel();
+  game.items.push({ c: w.b[0], b: w.b, e: w.e, el, y: -90 });
+  if (game.kind === "letters") refreshLetterPanel();
+  else buildWordPanel(w);
+}
+
+// spelling panel: the word's letters (with duplicates) padded with distractors
+function buildWordPanel(w) {
+  game.entry = "";
+  $("game-entry").textContent = " ";
+  const keys = [...w.b];
+  const taken = new Set(keys);
+  keys.push(...takeDistinct(taken, shuffle(ALL_LETTER_CHARS), Math.max(0, 8 - keys.length)));
+  const panel = $("game-letters");
+  panel.innerHTML = "";
+  for (const c of shuffle(keys)) {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "lkey"; b.textContent = c;
+    b.onclick = () => onLetterKey(c, b);
+    panel.appendChild(b);
+  }
 }
 
 // 8 letter buttons: the answers for what's falling, padded with look-alikes
@@ -1116,18 +1151,36 @@ function refreshLetterPanel() {
   }
 }
 
+function buzzKey(btn) {
+  btn.classList.remove("wrongflash");
+  void btn.offsetWidth;
+  btn.classList.add("wrongflash");
+  soundBad();
+}
+
 function onLetterKey(c, btn) {
   if (!game || game.over) return;
-  const hit = game.items.filter(it => it.c === c).sort((a, b) => b.y - a.y)[0];
-  if (hit) {
-    zapItem(hit);
-    recordResult("L:" + c, true);
-  } else {
-    btn.classList.remove("wrongflash");
-    void btn.offsetWidth;
-    btn.classList.add("wrongflash");
-    soundBad();
+  if (game.kind === "letters") {
+    const hit = game.items.filter(it => it.c === c).sort((a, b) => b.y - a.y)[0];
+    if (hit) {
+      zapItem(hit);
+      recordResult("L:" + c, true);
+    } else buzzKey(btn);
+    return;
   }
+  // word kind: spell the falling word letter by letter, in order
+  const it = game.items[0];
+  if (!it || btn.disabled) return;
+  if (c === it.b[game.entry.length]) {
+    btn.disabled = true;
+    game.entry += c;
+    $("game-entry").textContent = game.entry;
+    beep([980], 0.06, 0.08);
+    if (game.entry === it.b) {
+      zapItem(it);
+      recordResult("W:" + it.b, true);
+    }
+  } else buzzKey(btn);
 }
 
 function zapItem(it) {
@@ -1136,11 +1189,19 @@ function zapItem(it) {
   const el = it.el;
   game.items = game.items.filter(x => x !== it);
   setTimeout(() => el.remove(), 400);
-  game.score += 10;
-  game.speed += 1.2;
-  game.spawnEvery = Math.max(1500, game.spawnEvery - 55);
+  if (game.kind === "letters") {
+    game.score += 10;
+    game.speed += 1.2;
+    game.spawnEvery = Math.max(1500, game.spawnEvery - 55);
+    refreshLetterPanel();
+  } else {
+    game.score += 10 + 2 * it.b.length; // longer words are worth more
+    game.speed += 1.0;
+    game.entry = "";
+    $("game-entry").textContent = " ";
+    $("game-letters").innerHTML = "";
+  }
   updateGameHud();
-  refreshLetterPanel();
   beep([880, 1320], 0.08);
 }
 
@@ -1150,7 +1211,7 @@ function itemLanded(it) {
   const el = it.el;
   game.items = game.items.filter(x => x !== it);
   setTimeout(() => el.remove(), 400);
-  recordResult("L:" + it.c, false);
+  recordResult(game.kind === "letters" ? "L:" + it.c : "W:" + it.b, false);
   game.lives--;
   updateGameHud();
   soundBad();
@@ -1158,8 +1219,10 @@ function itemLanded(it) {
   // fresh sky after losing a life: keep the pace, short breather
   for (const other of game.items) other.el.remove();
   game.items = [];
+  game.entry = "";
   game.sinceSpawn = -1500;
-  refreshLetterPanel();
+  if (game.kind === "letters") refreshLetterPanel();
+  else { $("game-entry").textContent = " "; $("game-letters").innerHTML = ""; }
 }
 
 function endGame() {
