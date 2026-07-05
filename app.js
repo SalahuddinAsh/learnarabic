@@ -1,6 +1,6 @@
 "use strict";
 
-const APP_VERSION = "2.4.1";
+const APP_VERSION = "2.4.2";
 
 /* ================= tunable constants ================= */
 const COUNT_OPTIONS = [5, 10, 15, 20];
