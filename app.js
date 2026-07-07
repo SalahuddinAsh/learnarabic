@@ -1,6 +1,6 @@
 "use strict";
 
-const APP_VERSION = "2.5.0";
+const APP_VERSION = "2.6.0";
 
 /* ================= tunable constants ================= */
 const COUNT_OPTIONS = [5, 10, 15, 20];
@@ -125,6 +125,19 @@ const WORDS = [
   { w: "نَخْلَة", b: "نخلة", e: "🌴" },
   { w: "سَحَابَة", b: "سحابة", e: "☁️" },
   { w: "بَالُون", b: "بالون", e: "🎈" },
+  { w: "أَحْمَر", b: "احمر", e: "🔴" },
+  { w: "أَزْرَق", b: "ازرق", e: "🔵" },
+  { w: "أَخْضَر", b: "اخضر", e: "🟢" },
+  { w: "أَصْفَر", b: "اصفر", e: "🟡" },
+  { w: "بُرْتُقَالِيّ", b: "برتقالي", e: "🟠" },
+  { w: "بَنَفْسَجِيّ", b: "بنفسجي", e: "🟣" },
+  { w: "أَسْوَد", b: "اسود", e: "⚫" },
+  { w: "أَبْيَض", b: "ابيض", e: "⚪" },
+  { w: "بُنِّيّ", b: "بني", e: "🟤" },
+  { w: "دَائِرَة", b: "دائرة", e: "⭕" },
+  { w: "مُرَبَّع", b: "مربع", e: "🟦" },
+  { w: "مُثَلَّث", b: "مثلث", e: "🔺" },
+  { w: "مُعَيَّن", b: "معين", e: "🔶" },
 ];
 
 // simple vocalized sentences (3–5 words) with an emoji hint.
@@ -273,7 +286,7 @@ const STRINGS = {
     title: "نجوم القراءة ⭐",
     level: "المستوى", lvlLetters: "الحروف", lvlWords: "الكلمات", lvlSent: "الجمل",
     mode: "اللعبة",
-    modeMatch: "الصورة والحرف", modeConnect: "وصّل", modeBuild: "رتّب", modeRead: "اقرأ لي",
+    modeMatch: "الصورة والحرف", modeMissing: "الحرف الناقص", modeConnect: "وصّل", modeBuild: "رتّب", modeRead: "اقرأ لي",
     letters: "الحروف المختارة", all: "الكل",
     count: "كم عدد الأسئلة؟",
     timer: "المؤقت", timerOn: "⏱️ يعمل", timerOff: "🚫 بدون",
@@ -291,6 +304,7 @@ const STRINGS = {
     insSent: "رتّب الجملة",
     insConnect: "اسحب كل كلمة إلى صورتها",
     insOrder: "اسحب الكلمات إلى أماكنها لترتيب الجملة",
+    insMissing: "ما الحرف الناقص؟",
     insRead: "🎤 اقرأ بصوت عالٍ",
     timeUp: "انتهى الوقت! ⏰",
     answerIs: "الصحيح",
@@ -309,7 +323,7 @@ const STRINGS = {
     title: "Reading Stars ⭐",
     level: "Level", lvlLetters: "Letters", lvlWords: "Words", lvlSent: "Sentences",
     mode: "Game",
-    modeMatch: "Picture & letter", modeConnect: "Connect", modeBuild: "Arrange", modeRead: "Read to me",
+    modeMatch: "Picture & letter", modeMissing: "Missing letter", modeConnect: "Connect", modeBuild: "Arrange", modeRead: "Read to me",
     letters: "Letters to practice", all: "All",
     count: "How many questions?",
     timer: "Timer", timerOn: "⏱️ On", timerOff: "🚫 Off",
@@ -327,6 +341,7 @@ const STRINGS = {
     insSent: "Arrange the sentence",
     insConnect: "Drag each word to its picture",
     insOrder: "Drag the words into their places",
+    insMissing: "Which letter is missing?",
     insRead: "🎤 Read out loud",
     timeUp: "Time's up! ⏰",
     answerIs: "The answer is",
@@ -345,7 +360,7 @@ const STRINGS = {
     title: "Lese-Sterne ⭐",
     level: "Stufe", lvlLetters: "Buchstaben", lvlWords: "Wörter", lvlSent: "Sätze",
     mode: "Spiel",
-    modeMatch: "Bild & Buchstabe", modeConnect: "Verbinden", modeBuild: "Ordnen", modeRead: "Lies mir vor",
+    modeMatch: "Bild & Buchstabe", modeMissing: "Fehlender Buchstabe", modeConnect: "Verbinden", modeBuild: "Ordnen", modeRead: "Lies mir vor",
     letters: "Buchstaben zum Üben", all: "Alle",
     count: "Wie viele Aufgaben?",
     timer: "Zeitlimit", timerOn: "⏱️ An", timerOff: "🚫 Aus",
@@ -363,6 +378,7 @@ const STRINGS = {
     insSent: "Ordne den Satz",
     insConnect: "Ziehe jedes Wort zu seinem Bild",
     insOrder: "Ziehe die Wörter an ihre Plätze",
+    insMissing: "Welcher Buchstabe fehlt?",
     insRead: "🎤 Lies laut vor",
     timeUp: "Zeit ist um! ⏰",
     answerIs: "Richtig ist",
@@ -389,7 +405,7 @@ let settings = loadSettings();
 
 function validModes(level) {
   if (level === "letters") return ["match", "read"];
-  if (level === "words") return ["match", "connect", "build", "read"];
+  if (level === "words") return ["match", "missing", "connect", "build", "read"];
   return ["build", "connect", "read"]; // sentences
 }
 
@@ -544,6 +560,7 @@ function makeQ(cfg) {
   if (lv === "letters") return m === "read" ? qReadLetter(cfg) : qLetterMatch(cfg);
   if (lv === "words") {
     if (m === "match") return qPic(cfg);
+    if (m === "missing") return qMissing(cfg);
     if (m === "connect") return qConnect(cfg);
     if (m === "build") return qBuild(cfg);
     return qReadWord(cfg);
@@ -621,6 +638,34 @@ function qPic(cfg) {
       ? makeCards(w.e, ds.map(x => x.e), 4)
       : makeCards(w.w, ds.map(x => x.w), 4),
     answerText: toEmoji ? w.e : w.w, reveal: toEmoji ? "" : w.e,
+  };
+}
+
+// missing letter: word shown with one blanked spot + its picture; pick the letter that fills it.
+// Some bare words contain ة or hamza-alif forms that aren't in the 28-letter LETTERS
+// list (only ever used mid/end-word elsewhere) — only blank a position we can look up.
+function qMissing(cfg) {
+  const pool = WORDS.filter(x => x.b.length >= 3);
+  let w = pickWord(cfg, pool.length ? pool : WORDS);
+  let chars = [...w.b];
+  let validIdx = chars.map((c, i) => i).filter(i => !!letterByChar(chars[i]));
+  for (let attempt = 0; attempt < 20 && !validIdx.length; attempt++) {
+    w = pick(pool.length ? pool : WORDS);
+    chars = [...w.b];
+    validIdx = chars.map((c, i) => i).filter(i => !!letterByChar(chars[i]));
+  }
+  const idx = pick(validIdx);
+  const correct = chars[idx];
+  const display = chars.map((c, i) => (i === idx ? "▢" : c)).join("");
+  const L = letterByChar(correct);
+  const sameGroup = LETTERS.filter(x => x.group === L.group && x.c !== correct).map(x => x.c);
+  const others = shuffle(ALL_LETTER_CHARS.filter(c => c !== correct && !sameGroup.includes(c)));
+  return {
+    mode: "missing", level: "words", key: "W:" + w.b + ":" + idx, weakKey: "W:" + w.b,
+    insKey: "insMissing",
+    prompt: display, promptEmoji: w.e, missingWord: true,
+    cards: makeCards(correct, [...shuffle(sameGroup), ...others], 5),
+    answerText: correct, reveal: w.w,
   };
 }
 
@@ -848,10 +893,15 @@ function nextQuestion() {
   $("instruction").textContent = t[q.insKey] || "";
 
   const promptEl = $("prompt");
-  promptEl.textContent = q.promptEmoji || q.prompt || "";
-  promptEl.classList.toggle("emoji", !!q.promptEmoji);
-  promptEl.classList.toggle("read-big", q.mode === "read" && !q.sent);
-  promptEl.classList.toggle("sent", !!q.sent && q.mode === "read");
+  promptEl.classList.remove("emoji", "read-big", "sent");
+  if (q.missingWord) {
+    promptEl.innerHTML = `<div class="missing-pic">${q.promptEmoji}</div><div class="missing-word">${q.prompt}</div>`;
+  } else {
+    promptEl.textContent = q.promptEmoji || q.prompt || "";
+    promptEl.classList.toggle("emoji", !!q.promptEmoji);
+    promptEl.classList.toggle("read-big", q.mode === "read" && !q.sent);
+    promptEl.classList.toggle("sent", !!q.sent && q.mode === "read");
+  }
 
   const builtEl = $("built");
   builtEl.hidden = q.mode !== "build";
