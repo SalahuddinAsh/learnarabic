@@ -51,11 +51,14 @@ class _Tile extends StatelessWidget {
           child: Container(
             constraints: BoxConstraints(minWidth: sent ? 0 : 64, minHeight: 64),
             padding: EdgeInsets.symmetric(horizontal: sent ? 16 : 10, vertical: sent ? 8 : 6),
-            alignment: Alignment.center,
-            child: Text(
-              label,
-              textDirection: TextDirection.rtl,
-              style: TextStyle(fontSize: sent ? 22 : 30, fontWeight: FontWeight.w800, color: AppColors.textDark),
+            child: Center(
+              widthFactor: 1,
+              heightFactor: 1,
+              child: Text(
+                label,
+                textDirection: TextDirection.rtl,
+                style: TextStyle(fontSize: sent ? 22 : 30, fontWeight: FontWeight.w800, color: AppColors.textDark),
+              ),
             ),
           ),
         ),

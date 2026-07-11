@@ -63,16 +63,19 @@ class _Slot extends StatelessWidget {
           child: Container(
             constraints: const BoxConstraints(minWidth: 78, minHeight: 58),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            alignment: Alignment.center,
             decoration: BoxDecoration(
               color: filled ? AppColors.card : Colors.white.withValues(alpha: 0.55),
               border: Border.all(color: filled ? AppColors.teal : const Color(0xFFB5E6DE), width: 3),
               borderRadius: BorderRadius.circular(14),
             ),
-            child: Text(
-              word ?? "",
-              textDirection: TextDirection.rtl,
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: Color(0xFF0D6E63)),
+            child: Center(
+              widthFactor: 1,
+              heightFactor: 1,
+              child: Text(
+                word ?? "",
+                textDirection: TextDirection.rtl,
+                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: Color(0xFF0D6E63)),
+              ),
             ),
           ),
         );

@@ -31,7 +31,6 @@ class SimpleChip extends StatelessWidget {
           duration: const Duration(milliseconds: 120),
           constraints: const BoxConstraints(minWidth: 56, minHeight: 56),
           padding: padding,
-          alignment: Alignment.center,
           decoration: BoxDecoration(
             color: selected ? AppColors.teal : AppColors.chipBg,
             border: Border.all(color: selected ? AppColors.teal : AppColors.chipBorder, width: 2.5),
@@ -40,13 +39,22 @@ class SimpleChip extends StatelessWidget {
                 ? [BoxShadow(color: AppColors.teal.withValues(alpha: 0.4), blurRadius: 14, offset: const Offset(0, 4))]
                 : null,
           ),
-          child: Text(
-            label,
-            textDirection: textDirection,
-            style: TextStyle(
-              fontSize: fontSize,
-              fontWeight: FontWeight.w700,
-              color: selected ? Colors.white : AppColors.textMid,
+          // Centering via the child (not Container.alignment) so this chip
+          // shrink-wraps its content inside a Wrap instead of expanding to
+          // fill the row — Container.alignment makes it greedily claim all
+          // available width under bounded constraints, which is what was
+          // forcing these chips into a single stacked column.
+          child: Center(
+            widthFactor: 1,
+            heightFactor: 1,
+            child: Text(
+              label,
+              textDirection: textDirection,
+              style: TextStyle(
+                fontSize: fontSize,
+                fontWeight: FontWeight.w700,
+                color: selected ? Colors.white : AppColors.textMid,
+              ),
             ),
           ),
         ),
@@ -127,18 +135,21 @@ class LangChip extends StatelessWidget {
         child: Container(
           constraints: const BoxConstraints(minWidth: 44, minHeight: 40),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          alignment: Alignment.center,
           decoration: BoxDecoration(
             color: selected ? AppColors.teal : AppColors.chipSoftBg2,
             border: Border.all(color: selected ? AppColors.teal : AppColors.chipBorder, width: 2),
             borderRadius: BorderRadius.circular(12),
           ),
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-              color: selected ? Colors.white : AppColors.teal,
+          child: Center(
+            widthFactor: 1,
+            heightFactor: 1,
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                color: selected ? Colors.white : AppColors.teal,
+              ),
             ),
           ),
         ),
