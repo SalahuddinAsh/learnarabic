@@ -45,6 +45,7 @@ class QuizController extends ChangeNotifier {
   int pairsDone = 0;
   int connectMistakes = 0;
   final Set<String> wrongWords = {};
+  final Set<String> pairedBare = {}; // bare forms matched successfully so far this question
 
   // connect (sentence order) mode: slotTileIndex[slot] = index into current.tiles, or null if empty
   List<int?> slotTileIndex = [];
@@ -95,6 +96,7 @@ class QuizController extends ChangeNotifier {
     connectMistakes = 0;
     wrongWords.clear();
     usedTileIndices.clear();
+    pairedBare.clear();
     slotTileIndex = (current.mode == "connect" && current.level == "sent")
         ? List<int?>.filled(current.tiles!.length, null)
         : [];
@@ -177,6 +179,7 @@ class QuizController extends ChangeNotifier {
     if (locked) return;
     if (draggedBare == targetBare) {
       pairsDone++;
+      pairedBare.add(draggedBare);
       WeakMemory.recordResult("W:$draggedBare", !wrongWords.contains(draggedBare));
       onPairMatched?.call();
       notifyListeners();

@@ -6,6 +6,9 @@ import '../logic/quiz_controller.dart';
 import '../models/question.dart';
 import '../theme.dart';
 import '../widgets/app_card.dart';
+import '../widgets/build_tiles.dart';
+import '../widgets/connect_board.dart';
+import '../widgets/order_board.dart';
 
 /// Hosts the shared chrome (quit/progress/score, timer bar, instruction,
 /// prompt, feedback) and swaps its answer area by mode — mirrors
@@ -181,7 +184,7 @@ class _QuestionArea extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             _Prompt(q: q),
-            if (q.mode == "build" && quiz.builtText.isNotEmpty) ...[
+            if (q.mode == "build") ...[
               const SizedBox(height: 12),
               _BuiltBox(quiz: quiz),
             ],
@@ -276,7 +279,10 @@ class _AnswerArea extends StatelessWidget {
   Widget build(BuildContext context) {
     final q = quiz.current;
     if (q.cards != null) return _CardsGrid(quiz: quiz);
-    // build/connect/read answer areas are added in later tasks.
+    if (q.mode == "build") return BuildTiles(quiz: quiz);
+    if (q.mode == "connect" && q.level == "words") return ConnectBoard(quiz: quiz);
+    if (q.mode == "connect" && q.level == "sent") return OrderBoard(quiz: quiz);
+    // read-to-me grade buttons land in the next task.
     return const SizedBox.shrink();
   }
 }
