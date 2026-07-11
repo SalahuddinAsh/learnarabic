@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'logic/question_generator.dart';
 import 'logic/quiz_controller.dart';
 import 'screens/quiz_screen.dart';
+import 'screens/results_screen.dart';
 import 'screens/setup_screen.dart';
 import 'services/settings_controller.dart';
 import 'services/storage.dart';
@@ -51,6 +52,7 @@ class _AppRootState extends State<AppRoot> {
   QuizController? _quizController;
 
   void _startQuiz() {
+    _quizController?.dispose();
     final settings = context.read<SettingsController>().settings;
     final cfg = buildCfg(settings);
     final controller = QuizController(settings, cfg)..start();
@@ -69,8 +71,11 @@ class _AppRootState extends State<AppRoot> {
   }
 
   void _onQuizFinished() {
-    // Results screen lands in a later task; for now, return to setup.
     setState(() => _screen = AppScreen.results);
+  }
+
+  void _playGame() {
+    setState(() => _screen = AppScreen.game);
   }
 
   @override
@@ -81,6 +86,13 @@ class _AppRootState extends State<AppRoot> {
       case AppScreen.quiz:
         return QuizScreen(quiz: _quizController!, onQuit: _quitQuiz, onFinished: _onQuizFinished);
       case AppScreen.results:
+        return ResultsScreen(
+          settings: _quizController!.settings,
+          result: _quizController!.result!,
+          onPlayGame: _playGame,
+          onAgain: _startQuiz,
+          onSettings: _quitQuiz,
+        );
       case AppScreen.game:
         return Scaffold(
           backgroundColor: AppColors.teal,
@@ -88,10 +100,7 @@ class _AppRootState extends State<AppRoot> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  "Score: ${_quizController?.result?.score ?? 0} / 1000  (results screen coming soon)",
-                  style: const TextStyle(color: Colors.white, fontSize: 18),
-                ),
+                const Text("Falling Pictures game coming soon", style: TextStyle(color: Colors.white, fontSize: 18)),
                 const SizedBox(height: 16),
                 ElevatedButton(onPressed: _quitQuiz, child: const Text("Back to setup")),
               ],
