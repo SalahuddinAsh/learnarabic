@@ -9,6 +9,7 @@ import 'screens/quiz_screen.dart';
 import 'screens/results_screen.dart';
 import 'screens/setup_screen.dart';
 import 'services/settings_controller.dart';
+import 'services/sound_service.dart';
 import 'services/storage.dart';
 import 'theme.dart';
 
@@ -53,12 +54,18 @@ class _AppRootState extends State<AppRoot> {
   AppScreen _screen = AppScreen.setup;
   QuizController? _quizController;
   GameController? _gameController;
+  late final SoundService _sound = SoundService(context.read<SettingsController>());
 
   void _startQuiz() {
     _quizController?.dispose();
     final settings = context.read<SettingsController>().settings;
     final cfg = buildCfg(settings);
-    final controller = QuizController(settings, cfg)..start();
+    final controller = QuizController(settings, cfg)
+      ..onGood = _sound.good
+      ..onBad = _sound.bad
+      ..onTick = _sound.tick
+      ..onPairMatched = _sound.pairMatched
+      ..start();
     setState(() {
       _quizController = controller;
       _screen = AppScreen.quiz;
@@ -80,8 +87,12 @@ class _AppRootState extends State<AppRoot> {
   void _playGame() {
     final settings = _quizController!.settings;
     final cfg = buildCfg(settings);
+    final controller = GameController(settings, cfg)
+      ..onZap = _sound.zap
+      ..onBad = _sound.bad
+      ..onKeyTick = _sound.keyTick;
     setState(() {
-      _gameController = GameController(settings, cfg);
+      _gameController = controller;
       _screen = AppScreen.game;
     });
   }
