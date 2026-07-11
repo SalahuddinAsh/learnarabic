@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import 'logic/game_controller.dart';
 import 'logic/question_generator.dart';
 import 'logic/quiz_controller.dart';
+import 'screens/game_screen.dart';
 import 'screens/quiz_screen.dart';
 import 'screens/results_screen.dart';
 import 'screens/setup_screen.dart';
@@ -50,6 +52,7 @@ class AppRoot extends StatefulWidget {
 class _AppRootState extends State<AppRoot> {
   AppScreen _screen = AppScreen.setup;
   QuizController? _quizController;
+  GameController? _gameController;
 
   void _startQuiz() {
     _quizController?.dispose();
@@ -75,7 +78,22 @@ class _AppRootState extends State<AppRoot> {
   }
 
   void _playGame() {
-    setState(() => _screen = AppScreen.game);
+    final settings = _quizController!.settings;
+    final cfg = buildCfg(settings);
+    setState(() {
+      _gameController = GameController(settings, cfg);
+      _screen = AppScreen.game;
+    });
+  }
+
+  // quitGame() in app.js always returns to the results screen, whether the
+  // kid quits mid-game or taps "OK" on the game-over overlay.
+  void _leaveGame() {
+    _gameController?.dispose();
+    setState(() {
+      _gameController = null;
+      _screen = AppScreen.results;
+    });
   }
 
   @override
@@ -94,19 +112,7 @@ class _AppRootState extends State<AppRoot> {
           onSettings: _quitQuiz,
         );
       case AppScreen.game:
-        return Scaffold(
-          backgroundColor: AppColors.teal,
-          body: Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text("Falling Pictures game coming soon", style: TextStyle(color: Colors.white, fontSize: 18)),
-                const SizedBox(height: 16),
-                ElevatedButton(onPressed: _quitQuiz, child: const Text("Back to setup")),
-              ],
-            ),
-          ),
-        );
+        return GameScreen(game: _gameController!, onQuit: _leaveGame);
     }
   }
 }
