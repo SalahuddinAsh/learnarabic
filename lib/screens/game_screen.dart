@@ -119,16 +119,10 @@ class _Sky extends StatelessWidget {
               Positioned(
                 top: it.y,
                 left: it.leftPercent / 100 * constraints.maxWidth,
-                child: const _FallItem(chute: "🪂"),
+                child: _FallItem(emoji: it.emoji),
               ),
             for (final it in game.boomingItems)
               Positioned(top: it.y, left: it.leftPercent / 100 * constraints.maxWidth, child: const _BoomItem()),
-            for (final it in game.items)
-              Positioned(
-                top: it.y + 46,
-                left: it.leftPercent / 100 * constraints.maxWidth,
-                child: Text(it.emoji, style: const TextStyle(fontSize: 44)),
-              ),
           ],
         );
       },
@@ -136,11 +130,22 @@ class _Sky extends StatelessWidget {
   }
 }
 
+/// A parachute + its cargo emoji stacked as one unit — mirrors `.fall`
+/// (`.chute` above `.cargo`, overlapping slightly via negative margin).
 class _FallItem extends StatelessWidget {
-  final String chute;
-  const _FallItem({required this.chute});
+  final String emoji;
+  const _FallItem({required this.emoji});
+
   @override
-  Widget build(BuildContext context) => Text(chute, style: const TextStyle(fontSize: 30));
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Text("🪂", style: TextStyle(fontSize: 30)),
+        Transform.translate(offset: const Offset(0, -8), child: Text(emoji, style: const TextStyle(fontSize: 44))),
+      ],
+    );
+  }
 }
 
 class _BoomItem extends StatelessWidget {

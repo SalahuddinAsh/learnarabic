@@ -117,25 +117,30 @@ class SetupScreen extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Wrap(
-                            spacing: 6,
-                            runSpacing: 6,
-                            children: [
-                              for (final l in kLetters)
-                                SimpleChip(
-                                  label: l.char,
-                                  selected: s.letters.contains(l.char),
-                                  fontSize: 22,
-                                  padding: const EdgeInsets.all(8),
-                                  onTap: () => update((x) {
-                                    if (x.letters.contains(l.char)) {
-                                      x.letters.remove(l.char);
-                                    } else {
-                                      x.letters.add(l.char);
-                                    }
-                                  }),
-                                ),
-                            ],
+                          // Letter chips are Arabic content, always RTL regardless of UI
+                          // language — mirrors dir="rtl" hardcoded on #letters-row.
+                          Directionality(
+                            textDirection: TextDirection.rtl,
+                            child: Wrap(
+                              spacing: 6,
+                              runSpacing: 6,
+                              children: [
+                                for (final l in kLetters)
+                                  SimpleChip(
+                                    label: l.char,
+                                    selected: s.letters.contains(l.char),
+                                    fontSize: 22,
+                                    padding: const EdgeInsets.all(8),
+                                    onTap: () => update((x) {
+                                      if (x.letters.contains(l.char)) {
+                                        x.letters.remove(l.char);
+                                      } else {
+                                        x.letters.add(l.char);
+                                      }
+                                    }),
+                                  ),
+                              ],
+                            ),
                           ),
                           const SizedBox(height: 10),
                           SimpleChip(

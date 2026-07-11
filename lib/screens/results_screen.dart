@@ -129,11 +129,14 @@ class _MissedReview extends StatelessWidget {
         children: [
           Text(t.s("review"), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.badDark)),
           const SizedBox(height: 6),
+          // Missed items are Arabic content, always RTL regardless of UI
+          // language — mirrors dir="rtl" hardcoded on #missed-list.
           for (final m in result.missed)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 4),
               child: Text(
                 "${m.answerText} ${m.reveal ?? ""}",
+                textDirection: TextDirection.rtl,
                 style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.textMid),
               ),
             ),

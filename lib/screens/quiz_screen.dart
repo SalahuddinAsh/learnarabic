@@ -32,7 +32,11 @@ class QuizScreen extends StatelessWidget {
             WidgetsBinding.instance.addPostFrameCallback((_) => onFinished());
           }
           final t = kStrings[q.settings.lang]!;
-          final contentDir = q.settings.lang == "ar" ? TextDirection.rtl : TextDirection.ltr;
+          // Only the localized chrome (instruction/feedback text) follows the UI
+          // language; the question content (prompt/cards/tiles/connect/order) is
+          // Arabic and stays RTL regardless — mirrors dir="rtl" hardcoded on
+          // #prompt/#built/#cards/#tiles/#connect/#order in index.html.
+          final uiDir = q.settings.lang == "ar" ? TextDirection.rtl : TextDirection.ltr;
 
           return AppScreenBackground(
             child: Column(
@@ -48,9 +52,9 @@ class QuizScreen extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            _QuestionArea(quiz: q, t: t, dir: contentDir),
+                            _QuestionArea(quiz: q, t: t, uiDir: uiDir),
                             const SizedBox(height: 16),
-                            Directionality(textDirection: contentDir, child: _AnswerArea(quiz: q)),
+                            Directionality(textDirection: TextDirection.rtl, child: _AnswerArea(quiz: q)),
                           ],
                         ),
                       ),
@@ -160,8 +164,8 @@ class _TimeBar extends StatelessWidget {
 class _QuestionArea extends StatelessWidget {
   final QuizController quiz;
   final L10n t;
-  final TextDirection dir;
-  const _QuestionArea({required this.quiz, required this.t, required this.dir});
+  final TextDirection uiDir;
+  const _QuestionArea({required this.quiz, required this.t, required this.uiDir});
 
   @override
   Widget build(BuildContext context) {
@@ -174,23 +178,26 @@ class _QuestionArea extends StatelessWidget {
         borderRadius: BorderRadius.circular(24),
         boxShadow: [BoxShadow(color: AppColors.teal.withValues(alpha: 0.25), blurRadius: 30, offset: const Offset(0, 10))],
       ),
-      child: Directionality(
-        textDirection: dir,
-        child: Column(
-          children: [
-            Text(
+      child: Column(
+        children: [
+          Directionality(
+            textDirection: uiDir,
+            child: Text(
               t.s(q.insKey),
               textAlign: TextAlign.center,
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textMuted),
             ),
-            const SizedBox(height: 8),
-            _Prompt(quiz: quiz),
-            if (q.mode == "build") ...[
-              const SizedBox(height: 12),
-              _BuiltBox(quiz: quiz),
-            ],
-            const SizedBox(height: 10),
-            SizedBox(
+          ),
+          const SizedBox(height: 8),
+          Directionality(textDirection: TextDirection.rtl, child: _Prompt(quiz: quiz)),
+          if (q.mode == "build") ...[
+            const SizedBox(height: 12),
+            Directionality(textDirection: TextDirection.rtl, child: _BuiltBox(quiz: quiz)),
+          ],
+          const SizedBox(height: 10),
+          Directionality(
+            textDirection: uiDir,
+            child: SizedBox(
               width: double.infinity,
               child: Text(
                 quiz.feedbackText,
@@ -204,8 +211,8 @@ class _QuestionArea extends StatelessWidget {
                 ),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
