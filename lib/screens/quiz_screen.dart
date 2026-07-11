@@ -8,6 +8,7 @@ import '../theme.dart';
 import '../widgets/app_card.dart';
 import '../widgets/build_tiles.dart';
 import '../widgets/connect_board.dart';
+import '../widgets/grade_buttons.dart';
 import '../widgets/order_board.dart';
 
 /// Hosts the shared chrome (quit/progress/score, timer bar, instruction,
@@ -183,7 +184,7 @@ class _QuestionArea extends StatelessWidget {
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textMuted),
             ),
             const SizedBox(height: 8),
-            _Prompt(q: q),
+            _Prompt(quiz: quiz),
             if (q.mode == "build") ...[
               const SizedBox(height: 12),
               _BuiltBox(quiz: quiz),
@@ -211,11 +212,12 @@ class _QuestionArea extends StatelessWidget {
 }
 
 class _Prompt extends StatelessWidget {
-  final Question q;
-  const _Prompt({required this.q});
+  final QuizController quiz;
+  const _Prompt({required this.quiz});
 
   @override
   Widget build(BuildContext context) {
+    final q = quiz.current;
     if (q.missingWord) {
       return Column(
         children: [
@@ -226,7 +228,9 @@ class _Prompt extends StatelessWidget {
       );
     }
     final hasEmoji = (q.promptEmoji ?? "").isNotEmpty;
-    final text = q.promptEmoji ?? q.prompt ?? "";
+    // onGrade()'s decorate: once graded, the reveal (emoji/example) is appended to the prompt.
+    final revealed = q.mode == "read" && quiz.locked && (q.reveal ?? "").isNotEmpty;
+    final text = revealed ? "${q.prompt} ${q.reveal}" : (q.promptEmoji ?? q.prompt ?? "");
     double fontSize = 40;
     if (hasEmoji) {
       fontSize = 72;
@@ -282,7 +286,7 @@ class _AnswerArea extends StatelessWidget {
     if (q.mode == "build") return BuildTiles(quiz: quiz);
     if (q.mode == "connect" && q.level == "words") return ConnectBoard(quiz: quiz);
     if (q.mode == "connect" && q.level == "sent") return OrderBoard(quiz: quiz);
-    // read-to-me grade buttons land in the next task.
+    if (q.mode == "read") return GradeButtons(quiz: quiz);
     return const SizedBox.shrink();
   }
 }
