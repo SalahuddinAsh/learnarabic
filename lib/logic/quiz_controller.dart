@@ -10,7 +10,7 @@ import '../services/high_scores.dart';
 import '../services/weak_memory.dart';
 import 'question_generator.dart';
 
-enum Feedback { none, good, bad }
+enum FeedbackKind { none, good, bad }
 
 /// Drives one round of quiz play — mirrors the `quiz` object and its
 /// startQuiz/nextQuestion/finishAnswer/onTimeout/advance/finishQuiz functions
@@ -32,7 +32,7 @@ class QuizController extends ChangeNotifier {
   QuizResult? result;
 
   bool locked = false;
-  Feedback feedback = Feedback.none;
+  FeedbackKind feedback = FeedbackKind.none;
   String feedbackText = "";
 
   // build mode: indices into current.tiles, in tap order
@@ -98,7 +98,7 @@ class QuizController extends ChangeNotifier {
     slotTileIndex = (current.mode == "connect" && current.level == "sent")
         ? List<int?>.filled(current.tiles!.length, null)
         : [];
-    feedback = Feedback.none;
+    feedback = FeedbackKind.none;
     feedbackText = "";
 
     if (isUntimed) {
@@ -239,14 +239,14 @@ class QuizController extends ChangeNotifier {
       final pts = maxPts * (0.5 + 0.5 * (frac > 1.0 ? 1.0 : frac));
       correct++;
       points += pts;
-      feedback = Feedback.good;
+      feedback = FeedbackKind.good;
       feedbackText = "${pick(_t.list("good"))} +${pts.round()} ${current.reveal ?? ""}".trim();
       onGood?.call();
       notifyListeners();
       _scheduleAdvance(1200);
     } else {
       missed.add(current);
-      feedback = Feedback.bad;
+      feedback = FeedbackKind.bad;
       feedbackText = "${_t.s("answerIs")}: ${current.answerText} ${current.reveal ?? ""}".trim();
       onBad?.call();
       notifyListeners();
@@ -258,7 +258,7 @@ class QuizController extends ChangeNotifier {
     locked = true;
     missed.add(current);
     WeakMemory.recordResult(current.weakKey, false);
-    feedback = Feedback.bad;
+    feedback = FeedbackKind.bad;
     feedbackText = "${_t.s("timeUp")} ${_t.s("answerIs")}: ${current.answerText} ${current.reveal ?? ""}".trim();
     if (current.mode == "build") {
       builtText = current.targetShow ?? "";
