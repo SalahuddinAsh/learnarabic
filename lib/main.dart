@@ -32,7 +32,7 @@ class ReadingStarsApp extends StatelessWidget {
         title: "Reading Stars",
         debugShowCheckedModeBanner: false,
         theme: buildAppTheme(),
-        home: const AppRoot(),
+        home: Scaffold(body: const AppRoot()),
       ),
     );
   }
@@ -54,7 +54,9 @@ class _AppRootState extends State<AppRoot> {
   AppScreen _screen = AppScreen.setup;
   QuizController? _quizController;
   GameController? _gameController;
-  late final SoundService _sound = SoundService(context.read<SettingsController>());
+  late final SoundService _sound = SoundService(
+    context.read<SettingsController>(),
+  );
 
   void _startQuiz() {
     _quizController?.dispose();
@@ -113,7 +115,11 @@ class _AppRootState extends State<AppRoot> {
       case AppScreen.setup:
         return SetupScreen(onStart: _startQuiz);
       case AppScreen.quiz:
-        return QuizScreen(quiz: _quizController!, onQuit: _quitQuiz, onFinished: _onQuizFinished);
+        return QuizScreen(
+          quiz: _quizController!,
+          onQuit: _quitQuiz,
+          onFinished: _onQuizFinished,
+        );
       case AppScreen.results:
         return ResultsScreen(
           settings: _quizController!.settings,
