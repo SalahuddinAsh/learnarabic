@@ -30,6 +30,7 @@ class QuizScreen extends StatelessWidget {
         builder: (context, q, _) {
           if (q.result != null) {
             WidgetsBinding.instance.addPostFrameCallback((_) => onFinished());
+            return const AppScreenBackground(child: SizedBox.shrink());
           }
           final t = kStrings[q.settings.lang]!;
           // Only the localized chrome (instruction/feedback text) follows the UI

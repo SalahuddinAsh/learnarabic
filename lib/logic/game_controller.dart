@@ -43,6 +43,7 @@ class GameController extends ChangeNotifier {
   bool isNewRecord = false;
   int bestScore = 0;
 
+  bool _disposed = false;
   final Random _rng = Random();
   Timer? _ticker;
   DateTime? _prevTick;
@@ -70,8 +71,15 @@ class GameController extends ChangeNotifier {
 
   void setSkyHeight(double h) => skyHeight = h;
 
+  @override
+  void notifyListeners() {
+    if (!_disposed) {
+      super.notifyListeners();
+    }
+  }
+
   void _tick() {
-    if (over) return;
+    if (over || _disposed) return;
     final now = DateTime.now();
     final dt = (now.difference(_prevTick!).inMicroseconds / 1e6).clamp(0.0, 0.1);
     _prevTick = now;
@@ -231,6 +239,7 @@ class GameController extends ChangeNotifier {
 
   @override
   void dispose() {
+    _disposed = true;
     _ticker?.cancel();
     super.dispose();
   }

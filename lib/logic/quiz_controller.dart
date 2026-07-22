@@ -52,6 +52,7 @@ class QuizController extends ChangeNotifier {
   final Set<int> usedTileIndices = {};
 
   // timer
+  bool _disposed = false;
   Timer? _timer;
   Timer? _advanceTimer;
   DateTime? _timerStart;
@@ -77,12 +78,19 @@ class QuizController extends ChangeNotifier {
     return List.generate(settings.count, (_) => genQuestion(cfg, recent), growable: false);
   }
 
-  Question get current => questions[index];
+  Question get current => questions[index < questions.length ? index : (questions.isNotEmpty ? questions.length - 1 : 0)];
   L10n get _t => kStrings[settings.lang]!;
-  bool get isUntimed => current.mode == "read" || !settings.timed;
-  int get progressCurrent => index + 1;
+  bool get isUntimed => questions.isNotEmpty ? (current.mode == "read" || !settings.timed) : true;
+  int get progressCurrent => (index + 1).clamp(1, questions.isNotEmpty ? questions.length : 1);
   int get progressTotal => questions.length;
   int get scoreRounded => points.round();
+
+  @override
+  void notifyListeners() {
+    if (!_disposed) {
+      super.notifyListeners();
+    }
+  }
 
   void start() => _beginQuestion();
 
@@ -124,6 +132,7 @@ class QuizController extends ChangeNotifier {
     timerFraction = 1.0;
     var lastTick = -1;
     _timer = Timer.periodic(const Duration(milliseconds: 100), (_) {
+      if (_disposed || _timer == null) return;
       final elapsed = DateTime.now().difference(_timerStart!).inMilliseconds;
       final left = totalMs - elapsed;
       final frac = (left / totalMs).clamp(0.0, 1.0);
@@ -278,6 +287,7 @@ class QuizController extends ChangeNotifier {
   }
 
   void _advance() {
+    if (_disposed) return;
     index++;
     if (index >= questions.length) {
       _finish();
@@ -307,6 +317,7 @@ class QuizController extends ChangeNotifier {
 
   @override
   void dispose() {
+    _disposed = true;
     _stopTimer();
     _advanceTimer?.cancel();
     super.dispose();
